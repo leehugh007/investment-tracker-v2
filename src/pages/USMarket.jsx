@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import StockPriceUpdater from '../components/StockPriceUpdater';
+import { DeleteTransactionButton } from '../components/TransactionManager';
 
 function USMarket() {
   const [transactions, setTransactions] = useState([]);
@@ -14,6 +15,12 @@ function USMarket() {
     const allTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
     const usTransactions = allTransactions.filter(tx => tx.market === 'US');
     setTransactions(usTransactions);
+  };
+
+  // 處理交易刪除 (新增功能，不影響現有邏輯)
+  const handleTransactionDelete = (deletedTransactionId) => {
+    // 重新加載交易數據
+    loadTransactions();
   };
 
   const handlePricesUpdated = (priceResults, market) => {
@@ -209,13 +216,14 @@ function USMarket() {
                     <th className="text-right py-3 px-4 font-medium text-gray-700">數量</th>
                     <th className="text-right py-3 px-4 font-medium text-gray-700">價格</th>
                     <th className="text-right py-3 px-4 font-medium text-gray-700">金額</th>
+                    <th className="text-center py-3 px-4 font-medium text-gray-700">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {transactions
                     .sort((a, b) => new Date(b.date) - new Date(a.date))
                     .map((tx, index) => (
-                      <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                      <tr key={tx.id || index} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4 text-gray-700">
                           {new Date(tx.date).toLocaleDateString()}
                         </td>
@@ -242,6 +250,12 @@ function USMarket() {
                         </td>
                         <td className="py-3 px-4 text-right font-medium">
                           ${(tx.quantity * tx.price).toFixed(2)}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <DeleteTransactionButton 
+                            transaction={tx} 
+                            onDelete={handleTransactionDelete}
+                          />
                         </td>
                       </tr>
                     ))}

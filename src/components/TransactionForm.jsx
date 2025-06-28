@@ -42,6 +42,28 @@ const TransactionForm = ({ market }) => {
       newErrors.date = '請選擇交易日期';
     }
 
+    // 賣出交易額外驗證 (新增功能，不影響買入)
+    if (formData.type === 'SELL') {
+      // 檢查是否有足夠的持股可以賣出
+      const existingTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+      const symbolTransactions = existingTransactions.filter(
+        tx => tx.symbol.toUpperCase() === formData.symbol.toUpperCase() && tx.market === market
+      );
+      
+      let totalHoldings = 0;
+      symbolTransactions.forEach(tx => {
+        if (tx.type === 'BUY') {
+          totalHoldings += tx.quantity;
+        } else if (tx.type === 'SELL') {
+          totalHoldings -= tx.quantity;
+        }
+      });
+
+      if (parseInt(formData.quantity) > totalHoldings) {
+        newErrors.quantity = `持股不足，目前持有 ${totalHoldings} 股`;
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -53,13 +75,13 @@ const TransactionForm = ({ market }) => {
       return;
     }
 
-    // 創建交易記錄 - 按照架構文檔設計
+    // 創建交易記錄 - 按照架構文檔設計 (向後兼容)
     const transaction = {
       id: Date.now().toString(),
       symbol: formData.symbol.toUpperCase(),
       stockName: stockInfo?.name || formData.symbol.toUpperCase(), // 整合股票名稱
       market,
-      type: formData.type,
+      type: formData.type, // 支援 BUY 和 SELL
       quantity: parseInt(formData.quantity),
       price: parseFloat(formData.price),
       date: formData.date,
@@ -67,7 +89,7 @@ const TransactionForm = ({ market }) => {
       timestamp: new Date().toISOString()
     };
 
-    // 保存到localStorage
+    // 保存到localStorage (保持現有邏輯)
     const existingTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
     const updatedTransactions = [...existingTransactions, transaction];
     localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
@@ -83,7 +105,9 @@ const TransactionForm = ({ market }) => {
     setStockInfo(null);
     setErrors({});
 
-    alert(`${config.name}交易記錄已成功新增！`);
+    // 根據交易類型顯示不同訊息
+    const actionText = formData.type === 'BUY' ? '買入' : '賣出';
+    alert(`${config.name}${actionText}交易記錄已成功新增！`);
   };
 
   const handleInputChange = (e) => {

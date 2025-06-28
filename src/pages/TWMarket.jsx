@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { DeleteTransactionButton } from '../components/TransactionManager';
 
 function TWMarket() {
   const navigate = useNavigate();
@@ -7,10 +8,20 @@ function TWMarket() {
 
   useEffect(() => {
     // 載入台股交易記錄
+    loadTransactions();
+  }, []);
+
+  const loadTransactions = () => {
     const allTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
     const twTransactions = allTransactions.filter(t => t.market === 'TW');
     setTransactions(twTransactions);
-  }, []);
+  };
+
+  // 處理交易刪除 (新增功能，不影響現有邏輯)
+  const handleTransactionDelete = (deletedTransactionId) => {
+    // 重新加載交易數據
+    loadTransactions();
+  };
 
   return (
     <div className="container mx-auto px-4 py-6">
