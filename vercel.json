@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "name": "investment-tracker-v2",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "env": {
+    "VITE_FINNHUB_API_KEY": "d1cd8n1r01qre5al6mbgd1cd8n1r01qre5al6mc0",
+    "VITE_FINMIND_API_KEY": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkYXRlIjoiMjAyNS0wNi0yNyAxMToyMzoyMyIsInVzZXJfaWQiOiJsZWVodWdoMDA3IiwiaXAiOiIyMjAuMTM2Ljc2LjI0NSJ9.0DfrywY-B-ynBUhfdvafiCr2WKJSCrdJdTpNEwUfR4Q",
+    "VITE_EXCHANGE_API_KEY": "b2c5ad8a96b0bafd62e49709"
+  }
+}
+
