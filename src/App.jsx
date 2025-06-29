@@ -6,6 +6,7 @@ import TWMarket from './pages/TWMarket';
 import HKMarket from './pages/HKMarket';
 import JPMarket from './pages/JPMarket';
 import HistoryAnalysis from './pages/HistoryAnalysis';
+import Settings from './pages/Settings';
 import TransactionForm from './components/TransactionForm';
 
 // 導航組件
@@ -19,6 +20,7 @@ const Navigation = () => {
     { path: '/hk', label: '🇭🇰 港股', color: 'red' },
     { path: '/jp', label: '🇯🇵 日股', color: 'yellow' },
     { path: '/history', label: '📈 歷史分析', color: 'purple' },
+    { path: '/settings', label: '⚙️ 設定', color: 'gray' },
   ];
 
   const getNavItemClass = (path, color) => {
@@ -31,7 +33,8 @@ const Navigation = () => {
         green: 'bg-green-600 text-white',
         red: 'bg-red-600 text-white',
         yellow: 'bg-yellow-600 text-white',
-        purple: 'bg-purple-600 text-white'
+        purple: 'bg-purple-600 text-white',
+        gray: 'bg-gray-600 text-white'
       };
       return `${baseClass} ${activeColors[color]}`;
     } else {
@@ -40,7 +43,8 @@ const Navigation = () => {
         green: 'text-green-600 hover:bg-green-50',
         red: 'text-red-600 hover:bg-red-50',
         yellow: 'text-yellow-600 hover:bg-yellow-50',
-        purple: 'text-purple-600 hover:bg-purple-50'
+        purple: 'text-purple-600 hover:bg-purple-50',
+        gray: 'text-gray-600 hover:bg-gray-50'
       };
       return `${baseClass} text-gray-600 hover:text-gray-900 ${hoverColors[color]}`;
     }
@@ -121,6 +125,9 @@ function App() {
           
           {/* 歷史分析頁面 */}
           <Route path="/history" element={<HistoryAnalysis />} />
+          
+          {/* 設定頁面 */}
+          <Route path="/settings" element={<Settings />} />
           
           {/* 新增交易頁面 - 支援市場參數 */}
           <Route path="/add-transaction" element={<TransactionForm market="US" />} />
