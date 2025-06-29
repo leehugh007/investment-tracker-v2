@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import StockNameLookup from './StockNameLookup';
 import { 
@@ -9,15 +10,7 @@ import {
 
 const TransactionForm = ({ market }) => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    symbol: '',
-    type: 'BUY',
-    quantity: '',
-    price: '',
-    date: new Date().toISOString().split('T')[0]
-  });
   const [stockInfo, setStockInfo] = useState(null);
-  const [errors, setErrors] = useState({});
   const [holdings, setHoldings] = useState(null);
   const [sellValidation, setSellValidation] = useState(null);
 
@@ -30,18 +23,40 @@ const TransactionForm = ({ market }) => {
 
   const config = marketConfig[market] || marketConfig.US;
 
+  // React Hook Form 設置
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    formState: { errors, isSubmitting }
+  } = useForm({
+    defaultValues: {
+      symbol: '',
+      type: 'BUY',
+      quantity: '',
+      price: '',
+      date: new Date().toISOString().split('T')[0]
+    }
+  });
+
+  // 監聽表單變化
+  const watchedSymbol = watch('symbol');
+  const watchedType = watch('type');
+  const watchedQuantity = watch('quantity');
+
   // 檢查持股狀況（當股票代碼或交易類型改變時）
   useEffect(() => {
-    if (formData.symbol && formData.type === 'SELL') {
+    if (watchedSymbol && watchedType === 'SELL') {
       const existingTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-      const currentHoldings = calculateHoldings(formData.symbol.toUpperCase(), existingTransactions);
+      const currentHoldings = calculateHoldings(watchedSymbol.toUpperCase(), existingTransactions);
       setHoldings(currentHoldings);
       
       // 如果有輸入數量，立即驗證
-      if (formData.quantity) {
+      if (watchedQuantity) {
         const validation = validateSellTransaction(
-          formData.symbol.toUpperCase(), 
-          parseInt(formData.quantity), 
+          watchedSymbol.toUpperCase(), 
+          parseInt(watchedQuantity), 
           existingTransactions
         );
         setSellValidation(validation);
@@ -52,65 +67,23 @@ const TransactionForm = ({ market }) => {
       setHoldings(null);
       setSellValidation(null);
     }
-  }, [formData.symbol, formData.type, formData.quantity]);
+  }, [watchedSymbol, watchedType, watchedQuantity]);
 
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.symbol.trim()) {
-      newErrors.symbol = '請輸入股票代碼';
-    }
-
-    if (!formData.quantity || formData.quantity <= 0) {
-      newErrors.quantity = '請輸入有效的數量';
-    }
-
-    if (!formData.price || formData.price <= 0) {
-      newErrors.price = '請輸入有效的價格';
-    }
-
-    if (!formData.date) {
-      newErrors.date = '請選擇交易日期';
-    }
-
-    // 賣出交易的額外驗證
-    if (formData.type === 'SELL') {
-      const existingTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-      const validation = validateSellTransaction(
-        formData.symbol.toUpperCase(),
-        parseInt(formData.quantity),
-        existingTransactions
-      );
-      
-      if (!validation.isValid) {
-        newErrors.quantity = validation.error;
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
+  // 表單提交處理
+  const onSubmit = async (data) => {
     try {
       // 獲取現有交易
       const existingTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
       
       // 準備交易資料
       const transactionData = {
-        symbol: formData.symbol.toUpperCase(),
-        stockName: stockInfo?.name || formData.symbol.toUpperCase(),
+        symbol: data.symbol.toUpperCase(),
+        stockName: stockInfo?.name || data.symbol.toUpperCase(),
         market,
-        type: formData.type,
-        quantity: formData.quantity,
-        price: formData.price,
-        date: formData.date,
+        type: data.type,
+        quantity: parseInt(data.quantity),
+        price: parseFloat(data.price),
+        date: data.date,
         currency: config.currency
       };
 
@@ -119,12 +92,12 @@ const TransactionForm = ({ market }) => {
       
       // 如果是賣出交易，需要更新相關的買入交易
       let updatedTransactions;
-      if (formData.type === 'SELL') {
+      if (data.type === 'SELL') {
         // createEnhancedTransaction 已經處理了配對邏輯，但我們需要獲取更新後的交易列表
         const { processSellTransaction } = await import('../utils/holdingsCalculator');
         const sellResult = processSellTransaction(
-          formData.symbol.toUpperCase(),
-          parseInt(formData.quantity),
+          data.symbol.toUpperCase(),
+          parseInt(data.quantity),
           existingTransactions
         );
         
@@ -143,15 +116,8 @@ const TransactionForm = ({ market }) => {
       localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
 
       // 重置表單
-      setFormData({
-        symbol: '',
-        type: 'BUY',
-        quantity: '',
-        price: '',
-        date: new Date().toISOString().split('T')[0]
-      });
+      reset();
       setStockInfo(null);
-      setErrors({});
       setHoldings(null);
       setSellValidation(null);
 
@@ -159,23 +125,44 @@ const TransactionForm = ({ market }) => {
       
     } catch (error) {
       console.error('交易提交失敗:', error);
-      setErrors({ submit: error.message });
+      alert(`提交失敗: ${error.message}`);
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-
-    // 清除對應的錯誤
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
+  // 自定義驗證規則
+  const validationRules = {
+    symbol: {
+      required: '請輸入股票代碼',
+      pattern: {
+        value: /^[A-Za-z0-9]+$/,
+        message: '股票代碼只能包含字母和數字'
+      }
+    },
+    quantity: {
+      required: '請輸入數量',
+      min: {
+        value: 1,
+        message: '數量必須大於0'
+      },
+      validate: (value) => {
+        if (watchedType === 'SELL' && holdings && !holdings.canSell) {
+          return `您目前沒有持有 ${watchedSymbol.toUpperCase()} 股票`;
+        }
+        if (watchedType === 'SELL' && holdings && parseInt(value) > holdings.totalQuantity) {
+          return `賣出數量 (${value}) 超過持有數量 (${holdings.totalQuantity})`;
+        }
+        return true;
+      }
+    },
+    price: {
+      required: '請輸入價格',
+      min: {
+        value: 0.01,
+        message: '價格必須大於0'
+      }
+    },
+    date: {
+      required: '請選擇交易日期'
     }
   };
 
@@ -202,7 +189,7 @@ const TransactionForm = ({ market }) => {
 
         {/* 交易表單 */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* 市場顯示 */}
             <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
               <div className="flex items-center justify-between">
@@ -222,21 +209,19 @@ const TransactionForm = ({ market }) => {
               </label>
               <input
                 type="text"
-                name="symbol"
-                value={formData.symbol}
-                onChange={handleInputChange}
+                {...register('symbol', validationRules.symbol)}
                 placeholder={`例如: ${config.placeholder}`}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   errors.symbol ? 'border-red-500' : 'border-gray-300'
                 }`}
               />
               {errors.symbol && (
-                <p className="mt-1 text-sm text-red-600">{errors.symbol}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.symbol.message}</p>
               )}
               
-              {/* 股票名稱自動顯示 - 按照架構文檔整合 */}
+              {/* 股票名稱自動顯示 */}
               <StockNameLookup 
-                symbol={formData.symbol}
+                symbol={watchedSymbol}
                 market={market}
                 onStockInfoChange={handleStockInfoChange}
                 className="mt-2"
@@ -252,10 +237,8 @@ const TransactionForm = ({ market }) => {
                 <label className="flex items-center">
                   <input
                     type="radio"
-                    name="type"
                     value="BUY"
-                    checked={formData.type === 'BUY'}
-                    onChange={handleInputChange}
+                    {...register('type')}
                     className="mr-2"
                   />
                   <span className="px-3 py-2 bg-green-100 text-green-800 rounded-lg font-medium">
@@ -265,10 +248,8 @@ const TransactionForm = ({ market }) => {
                 <label className="flex items-center">
                   <input
                     type="radio"
-                    name="type"
                     value="SELL"
-                    checked={formData.type === 'SELL'}
-                    onChange={handleInputChange}
+                    {...register('type')}
                     className="mr-2"
                   />
                   <span className="px-3 py-2 bg-red-100 text-red-800 rounded-lg font-medium">
@@ -279,7 +260,7 @@ const TransactionForm = ({ market }) => {
             </div>
 
             {/* 持股資訊顯示（僅賣出時） */}
-            {formData.type === 'SELL' && formData.symbol && (
+            {watchedType === 'SELL' && watchedSymbol && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <h3 className="text-sm font-medium text-yellow-800 mb-2">
                   📊 持股資訊
@@ -313,7 +294,7 @@ const TransactionForm = ({ market }) => {
                     </div>
                   ) : (
                     <div className="text-sm text-red-600">
-                      ❌ 您目前沒有持有 {formData.symbol.toUpperCase()} 股票
+                      ❌ 您目前沒有持有 {watchedSymbol.toUpperCase()} 股票
                     </div>
                   )
                 ) : (
@@ -332,9 +313,7 @@ const TransactionForm = ({ market }) => {
                 </label>
                 <input
                   type="number"
-                  name="quantity"
-                  value={formData.quantity}
-                  onChange={handleInputChange}
+                  {...register('quantity', validationRules.quantity)}
                   placeholder="100"
                   min="1"
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
@@ -342,7 +321,7 @@ const TransactionForm = ({ market }) => {
                   }`}
                 />
                 {errors.quantity && (
-                  <p className="mt-1 text-sm text-red-600">{errors.quantity}</p>
+                  <p className="mt-1 text-sm text-red-600">{errors.quantity.message}</p>
                 )}
               </div>
 
@@ -352,9 +331,7 @@ const TransactionForm = ({ market }) => {
                 </label>
                 <input
                   type="number"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleInputChange}
+                  {...register('price', validationRules.price)}
                   placeholder={market === 'US' ? '150.50' : '600'}
                   step="0.01"
                   min="0.01"
@@ -363,7 +340,7 @@ const TransactionForm = ({ market }) => {
                   }`}
                 />
                 {errors.price && (
-                  <p className="mt-1 text-sm text-red-600">{errors.price}</p>
+                  <p className="mt-1 text-sm text-red-600">{errors.price.message}</p>
                 )}
               </div>
             </div>
@@ -375,20 +352,18 @@ const TransactionForm = ({ market }) => {
               </label>
               <input
                 type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleInputChange}
+                {...register('date', validationRules.date)}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   errors.date ? 'border-red-500' : 'border-gray-300'
                 }`}
               />
               {errors.date && (
-                <p className="mt-1 text-sm text-red-600">{errors.date}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.date.message}</p>
               )}
             </div>
 
             {/* 交易摘要 */}
-            {formData.symbol && formData.quantity && formData.price && (
+            {watchedSymbol && watch('quantity') && watch('price') && (
               <div className="bg-gray-50 rounded-lg p-4">
                 <h3 className="text-sm font-medium text-gray-700 mb-2">交易摘要</h3>
                 <div className="space-y-1 text-sm">
@@ -399,7 +374,7 @@ const TransactionForm = ({ market }) => {
                   <div className="flex justify-between">
                     <span>股票:</span>
                     <span>
-                      {formData.symbol.toUpperCase()}
+                      {watchedSymbol.toUpperCase()}
                       {stockInfo && (
                         <span className="text-gray-600 ml-1">
                           - {stockInfo.name}
@@ -409,26 +384,16 @@ const TransactionForm = ({ market }) => {
                   </div>
                   <div className="flex justify-between">
                     <span>動作:</span>
-                    <span className={formData.type === 'BUY' ? 'text-green-600' : 'text-red-600'}>
-                      {formData.type === 'BUY' ? '買入' : '賣出'}
+                    <span className={watchedType === 'BUY' ? 'text-green-600' : 'text-red-600'}>
+                      {watchedType === 'BUY' ? '買入' : '賣出'}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>總金額:</span>
                     <span className="font-medium">
-                      {(formData.quantity * formData.price).toLocaleString()} {config.currency}
+                      {(watch('quantity') * watch('price')).toLocaleString()} {config.currency}
                     </span>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* 提交錯誤顯示 */}
-            {errors.submit && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-center">
-                  <span className="text-red-600 mr-2">❌</span>
-                  <span className="text-red-700 text-sm">{errors.submit}</span>
                 </div>
               </div>
             )}
@@ -437,9 +402,10 @@ const TransactionForm = ({ market }) => {
             <div className="flex space-x-4">
               <button
                 type="submit"
-                className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                disabled={isSubmitting}
+                className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                新增{config.name}交易記錄
+                {isSubmitting ? '處理中...' : `新增${config.name}交易記錄`}
               </button>
               <button
                 type="button"

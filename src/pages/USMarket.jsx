@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import StockPriceUpdater from '../components/StockPriceUpdater';
+import QuickSellModal from '../components/QuickSellModal';
 
 function USMarket() {
   const [transactions, setTransactions] = useState([]);
   const [stockPrices, setStockPrices] = useState({});
+  const [sellModalOpen, setSellModalOpen] = useState(false);
+  const [selectedHolding, setSelectedHolding] = useState(null);
 
   useEffect(() => {
     loadTransactions();
@@ -24,6 +27,17 @@ function USMarket() {
       });
       setStockPrices(prev => ({ ...prev, ...newPrices }));
     }
+  };
+
+  const handleSellClick = (holding) => {
+    setSelectedHolding(holding);
+    setSellModalOpen(true);
+  };
+
+  const handleSellComplete = () => {
+    loadTransactions(); // 重新載入交易記錄
+    setSellModalOpen(false);
+    setSelectedHolding(null);
   };
 
   // 計算持股統計
@@ -111,6 +125,7 @@ function USMarket() {
                     <th className="text-right py-3 px-4 font-medium text-gray-700">當前價格</th>
                     <th className="text-right py-3 px-4 font-medium text-gray-700">未實現損益</th>
                     <th className="text-right py-3 px-4 font-medium text-gray-700">報酬率</th>
+                    <th className="text-center py-3 px-4 font-medium text-gray-700">操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -173,6 +188,14 @@ function USMarket() {
                           ) : (
                             '-'
                           )}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <button
+                            onClick={() => handleSellClick(holding)}
+                            className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
+                          >
+                            賣出
+                          </button>
                         </td>
                       </tr>
                     );
@@ -251,6 +274,14 @@ function USMarket() {
           )}
         </div>
       </div>
+
+      {/* 快速賣出彈窗 */}
+      <QuickSellModal
+        isOpen={sellModalOpen}
+        onClose={() => setSellModalOpen(false)}
+        holding={selectedHolding}
+        onSellComplete={handleSellComplete}
+      />
     </div>
   );
 }
