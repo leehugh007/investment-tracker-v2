@@ -6,6 +6,11 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   base: '/investment-tracker-v2/',
+  server: {
+    host: '0.0.0.0',
+    port: 3001,
+    allowedHosts: 'all'
+  },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
@@ -23,11 +28,6 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-  },
-  server: {
-    port: 3000,
-    host: true,
-    open: true
   },
   preview: {
     port: 4173,
