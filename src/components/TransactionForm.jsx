@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, TrendingUp, TrendingDown, Info, AlertTriangle } from 'lucide-react';
 import StockNameLookup from './StockNameLookup';
 import { 
   validateSellTransaction, 
@@ -9,6 +10,16 @@ import {
   processSellTransaction
 } from '../utils/holdingsCalculator';
 import { transactionService } from '../hooks/useLocalStore';
+import { 
+  Button, 
+  Input, 
+  Label, 
+  Card, 
+  CardHeader, 
+  CardTitle, 
+  CardContent,
+  Badge 
+} from './ui';
 
 const TransactionForm = ({ market }) => {
   const navigate = useNavigate();
@@ -17,10 +28,10 @@ const TransactionForm = ({ market }) => {
   const [sellValidation, setSellValidation] = useState(null);
 
   const marketConfig = {
-    US: { currency: 'USD', placeholder: 'AAPL', name: '🇺🇸 美股' },
-    TW: { currency: 'TWD', placeholder: '2330', name: '🇹🇼 台股' },
-    HK: { currency: 'HKD', placeholder: '0700', name: '🇭🇰 港股' },
-    JP: { currency: 'JPY', placeholder: '7203', name: '🇯🇵 日股' }
+    US: { currency: 'USD', placeholder: 'AAPL', name: '美股', flag: '🇺🇸' },
+    TW: { currency: 'TWD', placeholder: '2330', name: '台股', flag: '🇹🇼' },
+    HK: { currency: 'HKD', placeholder: '0700', name: '港股', flag: '🇭🇰' },
+    JP: { currency: 'JPY', placeholder: '7203', name: '日股', flag: '🇯🇵' }
   };
 
   const config = marketConfig[market] || marketConfig.US;
@@ -181,252 +192,280 @@ const TransactionForm = ({ market }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-2xl mx-auto">
         {/* 頁面標題 */}
         <div className="mb-8">
-          <button
+          <Button
+            variant="ghost"
             onClick={() => navigate(-1)}
-            className="mb-4 px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
+            className="mb-4 -ml-4"
           >
-            ← 返回
-          </button>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            ➕ 新增{config.name}交易記錄
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            返回
+          </Button>
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            新增{config.name}交易記錄
           </h1>
-          <p className="text-gray-600">記錄您的買賣交易，系統將自動計算損益</p>
+          <p className="text-muted-foreground">記錄您的買賣交易，系統將自動計算損益</p>
         </div>
 
         {/* 交易表單 */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* 市場顯示 */}
-            <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
-              <div className="flex items-center justify-between">
-                <span className="text-blue-800 font-medium">
-                  投資市場: {config.name} ({config.currency})
-                </span>
-                <span className="text-sm text-blue-600">
-                  {market === 'US' || market === 'TW' ? 'API自動更新' : '手動輸入價格'}
-                </span>
-              </div>
-            </div>
-
-            {/* 股票代碼輸入 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                股票代碼 *
-              </label>
-              <input
-                type="text"
-                {...register('symbol', validationRules.symbol)}
-                placeholder={`例如: ${config.placeholder}`}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.symbol ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.symbol && (
-                <p className="mt-1 text-sm text-red-600">{errors.symbol.message}</p>
-              )}
-              
-              {/* 股票名稱自動顯示 */}
-              <StockNameLookup 
-                symbol={watchedSymbol}
-                market={market}
-                onStockInfoChange={handleStockInfoChange}
-                className="mt-2"
-              />
-            </div>
-
-            {/* 交易類型 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                交易類型 *
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    value="BUY"
-                    {...register('type')}
-                    className="mr-2"
-                  />
-                  <span className="px-3 py-2 bg-green-100 text-green-800 rounded-lg font-medium">
-                    買入
-                  </span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    value="SELL"
-                    {...register('type')}
-                    className="mr-2"
-                  />
-                  <span className="px-3 py-2 bg-red-100 text-red-800 rounded-lg font-medium">
-                    賣出
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            {/* 持股資訊顯示（僅賣出時） */}
-            {watchedType === 'SELL' && watchedSymbol && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-yellow-800 mb-2">
-                  📊 持股資訊
-                </h3>
-                {holdings ? (
-                  holdings.canSell ? (
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-yellow-700">目前持股:</span>
-                        <span className="font-medium text-yellow-900">
-                          {holdings.totalQuantity} 股
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-yellow-700">平均成本:</span>
-                        <span className="font-medium text-yellow-900">
-                          {holdings.averageCost} {config.currency}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-yellow-700">總成本:</span>
-                        <span className="font-medium text-yellow-900">
-                          {holdings.totalCost.toLocaleString()} {config.currency}
-                        </span>
-                      </div>
-                      {sellValidation && !sellValidation.isValid && (
-                        <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
-                          ⚠️ {sellValidation.error}
-                        </div>
-                      )}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>交易資訊</span>
+              <Badge variant="outline">
+                {config.flag} {config.name} ({config.currency})
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              {/* 市場資訊 */}
+              <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Info className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium text-primary">
+                        投資市場: {config.flag} {config.name} ({config.currency})
+                      </span>
                     </div>
-                  ) : (
-                    <div className="text-sm text-red-600">
-                      ❌ 您目前沒有持有 {watchedSymbol.toUpperCase()} 股票
+                    <Badge variant="secondary" className="text-xs">
+                      {market === 'US' || market === 'TW' ? 'API自動更新' : '手動輸入價格'}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 股票代碼輸入 */}
+              <div className="space-y-2">
+                <Label htmlFor="symbol">股票代碼 *</Label>
+                <Input
+                  id="symbol"
+                  type="text"
+                  {...register('symbol', validationRules.symbol)}
+                  placeholder={`例如: ${config.placeholder}`}
+                  className={errors.symbol ? 'border-destructive' : ''}
+                />
+                {errors.symbol && (
+                  <p className="text-sm text-destructive">{errors.symbol.message}</p>
+                )}
+                
+                {/* 股票名稱自動顯示 */}
+                <StockNameLookup 
+                  symbol={watchedSymbol}
+                  market={market}
+                  onStockInfoChange={handleStockInfoChange}
+                  className="mt-2"
+                />
+              </div>
+
+              {/* 交易類型 */}
+              <div className="space-y-3">
+                <Label>交易類型 *</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="flex items-center space-x-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      value="BUY"
+                      {...register('type')}
+                      className="sr-only"
+                    />
+                    <div className={`flex-1 flex items-center justify-center space-x-2 p-3 rounded-lg border-2 transition-colors ${
+                      watchedType === 'BUY' 
+                        ? 'border-positive bg-positive/10 text-positive' 
+                        : 'border-border hover:border-positive/50'
+                    }`}>
+                      <TrendingUp className="w-4 h-4" />
+                      <span className="font-medium">買入</span>
                     </div>
-                  )
-                ) : (
-                  <div className="text-sm text-gray-600">
-                    正在檢查持股狀況...
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 數量和價格 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  數量 (股) *
-                </label>
-                <input
-                  type="number"
-                  {...register('quantity', validationRules.quantity)}
-                  placeholder="100"
-                  min="1"
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.quantity ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {errors.quantity && (
-                  <p className="mt-1 text-sm text-red-600">{errors.quantity.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  價格 ({config.currency}) *
-                </label>
-                <input
-                  type="number"
-                  {...register('price', validationRules.price)}
-                  placeholder={market === 'US' ? '150.50' : '600'}
-                  step="0.01"
-                  min="0.01"
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.price ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {errors.price && (
-                  <p className="mt-1 text-sm text-red-600">{errors.price.message}</p>
-                )}
-              </div>
-            </div>
-
-            {/* 交易日期 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                交易日期 *
-              </label>
-              <input
-                type="date"
-                {...register('date', validationRules.date)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.date ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.date && (
-                <p className="mt-1 text-sm text-red-600">{errors.date.message}</p>
-              )}
-            </div>
-
-            {/* 交易摘要 */}
-            {watchedSymbol && watch('quantity') && watch('price') && (
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">交易摘要</h3>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span>市場:</span>
-                    <span>{config.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>股票:</span>
-                    <span>
-                      {watchedSymbol.toUpperCase()}
-                      {stockInfo && (
-                        <span className="text-gray-600 ml-1">
-                          - {stockInfo.name}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>動作:</span>
-                    <span className={watchedType === 'BUY' ? 'text-green-600' : 'text-red-600'}>
-                      {watchedType === 'BUY' ? '買入' : '賣出'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>總金額:</span>
-                    <span className="font-medium">
-                      {(watch('quantity') * watch('price')).toLocaleString()} {config.currency}
-                    </span>
-                  </div>
+                  </label>
+                  <label className="flex items-center space-x-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      value="SELL"
+                      {...register('type')}
+                      className="sr-only"
+                    />
+                    <div className={`flex-1 flex items-center justify-center space-x-2 p-3 rounded-lg border-2 transition-colors ${
+                      watchedType === 'SELL' 
+                        ? 'border-negative bg-negative/10 text-negative' 
+                        : 'border-border hover:border-negative/50'
+                    }`}>
+                      <TrendingDown className="w-4 h-4" />
+                      <span className="font-medium">賣出</span>
+                    </div>
+                  </label>
                 </div>
               </div>
-            )}
 
-            {/* 提交按鈕 */}
-            <div className="flex space-x-4">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? '處理中...' : `新增${config.name}交易記錄`}
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-              >
-                取消
-              </button>
-            </div>
-          </form>
-        </div>
+              {/* 持股資訊顯示（僅賣出時） */}
+              {watchedType === 'SELL' && watchedSymbol && (
+                <Card className="border-amber-200 bg-amber-50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm text-amber-800 flex items-center">
+                      <Info className="w-4 h-4 mr-2" />
+                      持股資訊
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    {holdings ? (
+                      holdings.canSell ? (
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-amber-700">目前持股:</span>
+                            <span className="font-medium text-amber-900">
+                              {holdings.totalQuantity} 股
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-amber-700">平均成本:</span>
+                            <span className="font-medium text-amber-900">
+                              {holdings.averageCost} {config.currency}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-amber-700">總成本:</span>
+                            <span className="font-medium text-amber-900">
+                              {holdings.totalCost.toLocaleString()} {config.currency}
+                            </span>
+                          </div>
+                          {sellValidation && !sellValidation.isValid && (
+                            <div className="mt-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                              <div className="flex items-center text-destructive text-sm">
+                                <AlertTriangle className="w-4 h-4 mr-2" />
+                                {sellValidation.error}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center text-sm text-destructive">
+                          <AlertTriangle className="w-4 h-4 mr-2" />
+                          您目前沒有持有 {watchedSymbol.toUpperCase()} 股票
+                        </div>
+                      )
+                    ) : (
+                      <div className="text-sm text-muted-foreground">
+                        正在檢查持股狀況...
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* 數量和價格 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">數量 (股) *</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    {...register('quantity', validationRules.quantity)}
+                    placeholder="100"
+                    min="1"
+                    className={errors.quantity ? 'border-destructive' : ''}
+                  />
+                  {errors.quantity && (
+                    <p className="text-sm text-destructive">{errors.quantity.message}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="price">價格 ({config.currency}) *</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    {...register('price', validationRules.price)}
+                    placeholder={market === 'US' ? '150.50' : '600'}
+                    step="0.01"
+                    min="0.01"
+                    className={errors.price ? 'border-destructive' : ''}
+                  />
+                  {errors.price && (
+                    <p className="text-sm text-destructive">{errors.price.message}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* 交易日期 */}
+              <div className="space-y-2">
+                <Label htmlFor="date">交易日期 *</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  {...register('date', validationRules.date)}
+                  className={errors.date ? 'border-destructive' : ''}
+                />
+                {errors.date && (
+                  <p className="text-sm text-destructive">{errors.date.message}</p>
+                )}
+              </div>
+
+              {/* 交易摘要 */}
+              {watchedSymbol && watch('quantity') && watch('price') && (
+                <Card className="bg-muted/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">交易摘要</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">市場:</span>
+                        <span>{config.flag} {config.name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">股票:</span>
+                        <span>
+                          {watchedSymbol.toUpperCase()}
+                          {stockInfo && (
+                            <span className="text-muted-foreground ml-1">
+                              - {stockInfo.name}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">動作:</span>
+                        <Badge variant={watchedType === 'BUY' ? 'positive' : 'negative'}>
+                          {watchedType === 'BUY' ? '買入' : '賣出'}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between font-medium">
+                        <span className="text-muted-foreground">總金額:</span>
+                        <span>
+                          {(watch('quantity') * watch('price')).toLocaleString()} {config.currency}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* 提交按鈕 */}
+              <div className="flex space-x-4 pt-4">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1"
+                  size="lg"
+                >
+                  {isSubmitting ? '處理中...' : `新增${config.name}交易記錄`}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate(-1)}
+                  size="lg"
+                >
+                  取消
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

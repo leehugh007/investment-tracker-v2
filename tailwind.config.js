@@ -6,9 +6,16 @@ export default {
   ],
   theme: {
     extend: {
-      // 自定義色彩系統
+      // shadcn/ui 色彩系統
       colors: {
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
         primary: {
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
           50: '#eff6ff',
           100: '#dbeafe',
           500: '#3b82f6',
@@ -16,7 +23,32 @@ export default {
           700: '#1d4ed8',
           900: '#1e3a8a',
         },
+        secondary: {
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))',
+        },
+        destructive: {
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))',
+        },
+        muted: {
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
+        },
+        accent: {
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
+        },
+        popover: {
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))',
+        },
+        card: {
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
+        },
         positive: {
+          DEFAULT: '#16a34a',
           50: '#f0fdf4',
           100: '#dcfce7',
           500: '#22c55e',
@@ -24,6 +56,7 @@ export default {
           700: '#15803d',
         },
         negative: {
+          DEFAULT: '#dc2626',
           50: '#fef2f2',
           100: '#fee2e2',
           500: '#ef4444',
