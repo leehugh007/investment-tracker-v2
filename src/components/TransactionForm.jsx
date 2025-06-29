@@ -5,8 +5,10 @@ import StockNameLookup from './StockNameLookup';
 import { 
   validateSellTransaction, 
   createEnhancedTransaction,
-  calculateHoldings 
+  calculateHoldings,
+  processSellTransaction
 } from '../utils/holdingsCalculator';
+import { transactionService } from '../hooks/useLocalStore';
 
 const TransactionForm = ({ market }) => {
   const navigate = useNavigate();
@@ -48,7 +50,8 @@ const TransactionForm = ({ market }) => {
   // 檢查持股狀況（當股票代碼或交易類型改變時）
   useEffect(() => {
     if (watchedSymbol && watchedType === 'SELL') {
-      const existingTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+      // 使用新的服務層獲取交易記錄
+      const existingTransactions = transactionService.getAll();
       const currentHoldings = calculateHoldings(watchedSymbol.toUpperCase(), existingTransactions);
       setHoldings(currentHoldings);
       
@@ -72,8 +75,8 @@ const TransactionForm = ({ market }) => {
   // 表單提交處理
   const onSubmit = async (data) => {
     try {
-      // 獲取現有交易
-      const existingTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+      // 使用新的服務層獲取現有交易
+      const existingTransactions = transactionService.getAll();
       
       // 準備交易資料
       const transactionData = {
@@ -87,14 +90,8 @@ const TransactionForm = ({ market }) => {
         currency: config.currency
       };
 
-      // 使用增強的交易創建邏輯
-      const enhancedTransaction = createEnhancedTransaction(transactionData, existingTransactions);
-      
-      // 如果是賣出交易，需要更新相關的買入交易
-      let updatedTransactions;
+      // 如果是賣出交易，需要先處理FIFO配對
       if (data.type === 'SELL') {
-        // createEnhancedTransaction 已經處理了配對邏輯，但我們需要獲取更新後的交易列表
-        const { processSellTransaction } = await import('../utils/holdingsCalculator');
         const sellResult = processSellTransaction(
           data.symbol.toUpperCase(),
           parseInt(data.quantity),
@@ -105,15 +102,28 @@ const TransactionForm = ({ market }) => {
           throw new Error(sellResult.error);
         }
         
-        // 添加新的賣出交易到更新後的交易列表
-        updatedTransactions = [...sellResult.updatedTransactions, enhancedTransaction];
+        // 批量更新交易記錄（包含FIFO配對的更新）
+        const success = transactionService.updateBatch(sellResult.updatedTransactions);
+        if (!success) {
+          throw new Error('更新交易記錄失敗');
+        }
+        
+        // 創建並添加賣出交易
+        const enhancedTransaction = createEnhancedTransaction(transactionData, sellResult.updatedTransactions);
+        const newTransaction = transactionService.add(enhancedTransaction);
+        
+        if (!newTransaction) {
+          throw new Error('保存賣出交易失敗');
+        }
       } else {
         // 買入交易直接添加
-        updatedTransactions = [...existingTransactions, enhancedTransaction];
+        const enhancedTransaction = createEnhancedTransaction(transactionData, existingTransactions);
+        const newTransaction = transactionService.add(enhancedTransaction);
+        
+        if (!newTransaction) {
+          throw new Error('保存買入交易失敗');
+        }
       }
-
-      // 保存到localStorage
-      localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
 
       // 重置表單
       reset();

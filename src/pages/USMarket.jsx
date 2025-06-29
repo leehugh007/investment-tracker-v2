@@ -2,22 +2,33 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import StockPriceUpdater from '../components/StockPriceUpdater';
 import QuickSellModal from '../components/QuickSellModal';
+import { transactionService, stockPriceService, useLocalStore } from '../hooks/useLocalStore';
 
 function USMarket() {
-  const [transactions, setTransactions] = useState([]);
   const [stockPrices, setStockPrices] = useState({});
   const [sellModalOpen, setSellModalOpen] = useState(false);
   const [selectedHolding, setSelectedHolding] = useState(null);
 
-  useEffect(() => {
-    loadTransactions();
-  }, []);
+  // 使用新的 localStorage hook
+  const { 
+    data: transactions, 
+    loading, 
+    error, 
+    reload: reloadTransactions 
+  } = useLocalStore(transactionService, []);
 
-  const loadTransactions = () => {
-    const allTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-    const usTransactions = allTransactions.filter(tx => tx.market === 'US');
-    setTransactions(usTransactions);
-  };
+  // 過濾美股交易記錄
+  const usTransactions = transactions.filter(tx => tx.market === 'US');
+
+  useEffect(() => {
+    // 載入股價數據
+    const loadStockPrices = () => {
+      const allPrices = stockPriceService.getAll();
+      setStockPrices(allPrices);
+    };
+
+    loadStockPrices();
+  }, []);
 
   const handlePricesUpdated = (priceResults, market) => {
     if (market === 'US') {
@@ -25,6 +36,9 @@ function USMarket() {
       priceResults.forEach(result => {
         newPrices[result.symbol] = result;
       });
+      
+      // 使用服務層更新股價
+      stockPriceService.updateBatch(newPrices);
       setStockPrices(prev => ({ ...prev, ...newPrices }));
     }
   };
@@ -35,7 +49,7 @@ function USMarket() {
   };
 
   const handleSellComplete = () => {
-    loadTransactions(); // 重新載入交易記錄
+    reloadTransactions(); // 重新載入交易記錄
     setSellModalOpen(false);
     setSelectedHolding(null);
   };
@@ -44,7 +58,7 @@ function USMarket() {
   const calculateHoldings = () => {
     const holdings = new Map();
     
-    transactions.forEach(tx => {
+    usTransactions.forEach(tx => {
       if (!holdings.has(tx.symbol)) {
         holdings.set(tx.symbol, {
           symbol: tx.symbol,
@@ -73,6 +87,38 @@ function USMarket() {
     return Array.from(holdings.values()).filter(h => h.totalQuantity > 0);
   };
 
+  // 處理載入狀態
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center py-8">
+            <p className="text-gray-500">載入中...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 處理錯誤狀態
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center py-8">
+            <p className="text-red-500">載入失敗: {error.message}</p>
+            <button 
+              onClick={reloadTransactions}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              重新載入
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const holdings = calculateHoldings();
 
   return (
@@ -98,12 +144,18 @@ function USMarket() {
           >
             📊 歷史分析
           </Link>
+          <button
+            onClick={reloadTransactions}
+            className="bg-gray-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-700 transition-colors"
+          >
+            🔄 重新載入
+          </button>
         </div>
 
         {/* 股價更新組件 */}
         <div className="mb-8">
           <StockPriceUpdater
-            transactions={transactions}
+            transactions={usTransactions}
             onPricesUpdated={handlePricesUpdated}
             market="US"
             className="bg-white rounded-lg shadow-md p-6"
@@ -210,11 +262,11 @@ function USMarket() {
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">交易記錄</h2>
           
-          {transactions.length === 0 ? (
+          {usTransactions.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-500 mb-4">尚無美股交易記錄</p>
               <Link
-                to="/transaction/US"
+                to="/add-transaction/us"
                 className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
               >
                 新增第一筆交易
@@ -235,10 +287,10 @@ function USMarket() {
                   </tr>
                 </thead>
                 <tbody>
-                  {transactions
+                  {usTransactions
                     .sort((a, b) => new Date(b.date) - new Date(a.date))
                     .map((tx, index) => (
-                      <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                      <tr key={tx.id || index} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4 text-gray-700">
                           {new Date(tx.date).toLocaleDateString()}
                         </td>
