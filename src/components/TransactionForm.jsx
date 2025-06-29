@@ -1,6 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StockNameLookup from './StockNameLookup';
+import { 
+  validateSellTransaction, 
+  createEnhancedTransaction,
+  calculateHoldings 
+} from '../utils/holdingsCalculator';
 
 const TransactionForm = ({ market }) => {
   const navigate = useNavigate();
@@ -13,6 +18,8 @@ const TransactionForm = ({ market }) => {
   });
   const [stockInfo, setStockInfo] = useState(null);
   const [errors, setErrors] = useState({});
+  const [holdings, setHoldings] = useState(null);
+  const [sellValidation, setSellValidation] = useState(null);
 
   const marketConfig = {
     US: { currency: 'USD', placeholder: 'AAPL', name: '🇺🇸 美股' },
@@ -22,6 +29,30 @@ const TransactionForm = ({ market }) => {
   };
 
   const config = marketConfig[market] || marketConfig.US;
+
+  // 檢查持股狀況（當股票代碼或交易類型改變時）
+  useEffect(() => {
+    if (formData.symbol && formData.type === 'SELL') {
+      const existingTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+      const currentHoldings = calculateHoldings(formData.symbol.toUpperCase(), existingTransactions);
+      setHoldings(currentHoldings);
+      
+      // 如果有輸入數量，立即驗證
+      if (formData.quantity) {
+        const validation = validateSellTransaction(
+          formData.symbol.toUpperCase(), 
+          parseInt(formData.quantity), 
+          existingTransactions
+        );
+        setSellValidation(validation);
+      } else {
+        setSellValidation(null);
+      }
+    } else {
+      setHoldings(null);
+      setSellValidation(null);
+    }
+  }, [formData.symbol, formData.type, formData.quantity]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -42,48 +73,94 @@ const TransactionForm = ({ market }) => {
       newErrors.date = '請選擇交易日期';
     }
 
+    // 賣出交易的額外驗證
+    if (formData.type === 'SELL') {
+      const existingTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+      const validation = validateSellTransaction(
+        formData.symbol.toUpperCase(),
+        parseInt(formData.quantity),
+        existingTransactions
+      );
+      
+      if (!validation.isValid) {
+        newErrors.quantity = validation.error;
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!validateForm()) {
       return;
     }
 
-    // 創建交易記錄 - 按照架構文檔設計
-    const transaction = {
-      id: Date.now().toString(),
-      symbol: formData.symbol.toUpperCase(),
-      stockName: stockInfo?.name || formData.symbol.toUpperCase(), // 整合股票名稱
-      market,
-      type: formData.type,
-      quantity: parseInt(formData.quantity),
-      price: parseFloat(formData.price),
-      date: formData.date,
-      currency: config.currency,
-      timestamp: new Date().toISOString()
-    };
+    try {
+      // 獲取現有交易
+      const existingTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+      
+      // 準備交易資料
+      const transactionData = {
+        symbol: formData.symbol.toUpperCase(),
+        stockName: stockInfo?.name || formData.symbol.toUpperCase(),
+        market,
+        type: formData.type,
+        quantity: formData.quantity,
+        price: formData.price,
+        date: formData.date,
+        currency: config.currency
+      };
 
-    // 保存到localStorage
-    const existingTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-    const updatedTransactions = [...existingTransactions, transaction];
-    localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+      // 使用增強的交易創建邏輯
+      const enhancedTransaction = createEnhancedTransaction(transactionData, existingTransactions);
+      
+      // 如果是賣出交易，需要更新相關的買入交易
+      let updatedTransactions;
+      if (formData.type === 'SELL') {
+        // createEnhancedTransaction 已經處理了配對邏輯，但我們需要獲取更新後的交易列表
+        const { processSellTransaction } = await import('../utils/holdingsCalculator');
+        const sellResult = processSellTransaction(
+          formData.symbol.toUpperCase(),
+          parseInt(formData.quantity),
+          existingTransactions
+        );
+        
+        if (!sellResult.success) {
+          throw new Error(sellResult.error);
+        }
+        
+        // 添加新的賣出交易到更新後的交易列表
+        updatedTransactions = [...sellResult.updatedTransactions, enhancedTransaction];
+      } else {
+        // 買入交易直接添加
+        updatedTransactions = [...existingTransactions, enhancedTransaction];
+      }
 
-    // 重置表單
-    setFormData({
-      symbol: '',
-      type: 'BUY',
-      quantity: '',
-      price: '',
-      date: new Date().toISOString().split('T')[0]
-    });
-    setStockInfo(null);
-    setErrors({});
+      // 保存到localStorage
+      localStorage.setItem('transactions', JSON.stringify(updatedTransactions));
 
-    alert(`${config.name}交易記錄已成功新增！`);
+      // 重置表單
+      setFormData({
+        symbol: '',
+        type: 'BUY',
+        quantity: '',
+        price: '',
+        date: new Date().toISOString().split('T')[0]
+      });
+      setStockInfo(null);
+      setErrors({});
+      setHoldings(null);
+      setSellValidation(null);
+
+      alert(`${config.name}交易記錄已成功新增！`);
+      
+    } catch (error) {
+      console.error('交易提交失敗:', error);
+      setErrors({ submit: error.message });
+    }
   };
 
   const handleInputChange = (e) => {
@@ -201,6 +278,52 @@ const TransactionForm = ({ market }) => {
               </div>
             </div>
 
+            {/* 持股資訊顯示（僅賣出時） */}
+            {formData.type === 'SELL' && formData.symbol && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-yellow-800 mb-2">
+                  📊 持股資訊
+                </h3>
+                {holdings ? (
+                  holdings.canSell ? (
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-yellow-700">目前持股:</span>
+                        <span className="font-medium text-yellow-900">
+                          {holdings.totalQuantity} 股
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-yellow-700">平均成本:</span>
+                        <span className="font-medium text-yellow-900">
+                          {holdings.averageCost} {config.currency}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-yellow-700">總成本:</span>
+                        <span className="font-medium text-yellow-900">
+                          {holdings.totalCost.toLocaleString()} {config.currency}
+                        </span>
+                      </div>
+                      {sellValidation && !sellValidation.isValid && (
+                        <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
+                          ⚠️ {sellValidation.error}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-red-600">
+                      ❌ 您目前沒有持有 {formData.symbol.toUpperCase()} 股票
+                    </div>
+                  )
+                ) : (
+                  <div className="text-sm text-gray-600">
+                    正在檢查持股狀況...
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* 數量和價格 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -296,6 +419,16 @@ const TransactionForm = ({ market }) => {
                       {(formData.quantity * formData.price).toLocaleString()} {config.currency}
                     </span>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* 提交錯誤顯示 */}
+            {errors.submit && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <span className="text-red-600 mr-2">❌</span>
+                  <span className="text-red-700 text-sm">{errors.submit}</span>
                 </div>
               </div>
             )}
