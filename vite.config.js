@@ -5,7 +5,7 @@ import path from 'path'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: './',
+  base: '/investment-tracker-v2/',
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
