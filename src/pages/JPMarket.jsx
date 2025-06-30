@@ -103,8 +103,7 @@ const JPMarket = () => {
       </div>
 
       {/* 投資組合統計卡片 */}
-      {holdings.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -163,7 +162,6 @@ const JPMarket = () => {
             </div>
           </div>
         </div>
-      )}
 
       {/* 新增交易按鈕 */}
       <div className="mb-6">

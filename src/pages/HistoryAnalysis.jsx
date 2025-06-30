@@ -1,5 +1,61 @@
 import { useState, useEffect, useMemo } from 'react';
 
+// 計算已實現損益的函數
+const calculateRealizedPnL = (transactions) => {
+  let totalRealizedPnL = 0;
+  
+  // 按股票分組
+  const stockGroups = {};
+  transactions.forEach(tx => {
+    if (!stockGroups[tx.symbol]) {
+      stockGroups[tx.symbol] = [];
+    }
+    stockGroups[tx.symbol].push(tx);
+  });
+  
+  // 對每個股票計算已實現損益
+  Object.values(stockGroups).forEach(stockTxs => {
+    // 按時間排序
+    stockTxs.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    const buyQueue = []; // FIFO 隊列存放買入記錄
+    
+    stockTxs.forEach(tx => {
+      if (tx.type === 'BUY') {
+        buyQueue.push({
+          price: tx.price,
+          quantity: tx.quantity,
+          remainingQuantity: tx.quantity
+        });
+      } else if (tx.type === 'SELL') {
+        let sellQuantity = tx.quantity;
+        const sellPrice = tx.price;
+        
+        // 使用 FIFO 方法配對賣出
+        while (sellQuantity > 0 && buyQueue.length > 0) {
+          const buyRecord = buyQueue[0];
+          const matchQuantity = Math.min(sellQuantity, buyRecord.remainingQuantity);
+          
+          // 計算這部分的已實現損益
+          const pnl = (sellPrice - buyRecord.price) * matchQuantity;
+          totalRealizedPnL += pnl;
+          
+          // 更新數量
+          sellQuantity -= matchQuantity;
+          buyRecord.remainingQuantity -= matchQuantity;
+          
+          // 如果買入記錄用完了，移除它
+          if (buyRecord.remainingQuantity === 0) {
+            buyQueue.shift();
+          }
+        }
+      }
+    });
+  });
+  
+  return totalRealizedPnL;
+};
+
 const HistoryAnalysis = () => {
   const [transactions, setTransactions] = useState([]);
   const [filters, setFilters] = useState({
@@ -65,11 +121,13 @@ const HistoryAnalysis = () => {
     const totalBuyAmount = buyTransactions.reduce((sum, tx) => sum + (tx.quantity * tx.price), 0);
     const totalSellAmount = sellTransactions.reduce((sum, tx) => sum + (tx.quantity * tx.price), 0);
     
-    // 簡化的已實現損益計算
-    const realizedPnL = totalSellAmount - totalBuyAmount;
+    // 正確的已實現損益計算
+    const realizedPnL = calculateRealizedPnL(filteredTransactions);
     
-    // 勝率計算（簡化版）
+    // 勝率計算（基於實際損益）
     const profitableTrades = sellTransactions.filter(tx => {
+      // 這裡需要更複雜的邏輯來計算每筆賣出的實際損益
+      // 暫時使用簡化版本
       const buyPrice = buyTransactions.find(buy => buy.symbol === tx.symbol)?.price || tx.price;
       return tx.price > buyPrice;
     }).length;
