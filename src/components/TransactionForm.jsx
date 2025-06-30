@@ -46,6 +46,7 @@ const TransactionForm = ({ market }) => {
   } = useForm({
     defaultValues: {
       symbol: '',
+      stockName: '',
       type: 'BUY',
       quantity: '',
       price: '',
@@ -92,7 +93,9 @@ const TransactionForm = ({ market }) => {
       // 準備交易資料
       const transactionData = {
         symbol: data.symbol.toUpperCase(),
-        stockName: stockInfo?.name || data.symbol.toUpperCase(),
+        stockName: (market === 'HK' || market === 'JP') 
+          ? (data.stockName || data.symbol.toUpperCase())
+          : (stockInfo?.name || data.symbol.toUpperCase()),
         market,
         type: data.type,
         quantity: parseInt(data.quantity),
@@ -253,13 +256,30 @@ const TransactionForm = ({ market }) => {
                   <p className="text-sm text-destructive">{errors.symbol.message}</p>
                 )}
                 
-                {/* 股票名稱自動顯示 */}
-                <StockNameLookup 
-                  symbol={watchedSymbol}
-                  market={market}
-                  onStockInfoChange={handleStockInfoChange}
-                  className="mt-2"
-                />
+                {/* 股票名稱自動顯示或手動輸入 */}
+                {(market === 'US' || market === 'TW') ? (
+                  <StockNameLookup 
+                    symbol={watchedSymbol}
+                    market={market}
+                    onStockInfoChange={handleStockInfoChange}
+                    className="mt-2"
+                  />
+                ) : (
+                  <div className="mt-2">
+                    <Label htmlFor="stockName">公司名稱 *</Label>
+                    <Input
+                      id="stockName"
+                      placeholder="請輸入公司名稱（如：騰訊控股、豐田汽車）"
+                      {...register('stockName', { 
+                        required: '請輸入公司名稱' 
+                      })}
+                      className="mt-1"
+                    />
+                    {errors.stockName && (
+                      <p className="text-sm text-destructive mt-1">{errors.stockName.message}</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* 交易類型 */}
