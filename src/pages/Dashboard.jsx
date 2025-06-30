@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import ExchangeRateUpdater from '../components/ExchangeRateUpdater';
 import UnifiedPnLDisplay from '../components/UnifiedPnLDisplay';
 import CardSummary from '../components/CardSummary';
+import unifiedPnLCalculator from '../utils/unifiedPnLCalculator';
 
 const Dashboard = () => {
   const [portfolioData, setPortfolioData] = useState({
@@ -18,8 +19,8 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
-    // 從localStorage載入所有市場的交易數據
-    const loadPortfolioData = () => {
+    // 從localStorage載入所有市場的交易數據並計算損益
+    const loadPortfolioData = async () => {
       const transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
       const marketTotals = { US: 0, TW: 0, HK: 0, JP: 0 };
       let totalInvestment = 0;
@@ -39,10 +40,26 @@ const Dashboard = () => {
           : 0;
       });
 
+      // 使用統一損益計算器計算已實現損益
+      let totalRealizedPnL = 0;
+      let totalUnrealizedPnL = 0;
+      
+      try {
+        // 計算投資組合總覽
+        const portfolioSummary = await unifiedPnLCalculator.calculatePortfolioSummary(transactions);
+        totalRealizedPnL = portfolioSummary.totalRealizedPnLTWD || 0;
+        totalUnrealizedPnL = portfolioSummary.totalUnrealizedPnLTWD || 0;
+      } catch (error) {
+        console.error('計算損益時發生錯誤:', error);
+        // 如果計算失敗，使用簡化計算
+        const realizedPnL = unifiedPnLCalculator.calculateRealizedPnL(transactions);
+        totalRealizedPnL = realizedPnL.reduce((sum, item) => sum + (item.realizedPnLTWD || 0), 0);
+      }
+
       setPortfolioData({
         totalInvestment,
-        totalUnrealizedPnL: 0,
-        totalRealizedPnL: 0,
+        totalUnrealizedPnL,
+        totalRealizedPnL,
         totalReturn: 0,
         marketDistribution
       });
