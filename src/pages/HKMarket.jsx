@@ -112,7 +112,7 @@ const HKMarket = () => {
           🇭🇰 港股投資組合
         </h1>
         <Link 
-          to="/add-transaction?market=HK" 
+          to="/add-transaction/hk" 
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
         >
           <Plus size={20} />

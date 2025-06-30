@@ -175,24 +175,6 @@ const JPMarket = () => {
         </Link>
       </div>
 
-      {/* 開發狀態說明 */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
-        <h2 className="text-lg font-semibold text-yellow-800 mb-2">🚧 開發中</h2>
-        <p className="text-yellow-700">
-          此頁面將在後續階段實現，包含持股明細、交易記錄和手動價格輸入功能
-        </p>
-      </div>
-
-      {/* 新增交易按鈕 */}
-      <div className="mb-6">
-        <Link 
-          to="/add-transaction/jp"
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2"
-        >
-          ➕新增交易
-        </Link>
-      </div>
-
       {/* 持股明細 */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4">持股明細</h2>
