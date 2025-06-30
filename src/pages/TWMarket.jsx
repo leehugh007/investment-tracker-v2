@@ -61,22 +61,13 @@ function TWMarket() {
     if (market === 'TW') {
       const newPrices = {};
       priceResults.forEach(result => {
-        newPrices[result.symbol] = result;
+        newPrices[result.symbol] = {
+          ...result,
+          currentPrice: result.price,
+          lastUpdated: new Date().toLocaleString()
+        };
       });
       setStockPrices(prev => ({ ...prev, ...newPrices }));
-      
-      // 更新持股的當前價格
-      setHoldings(prev => prev.map(holding => {
-        const priceData = newPrices[holding.symbol];
-        if (priceData && priceData.price) {
-          return {
-            ...holding,
-            currentPrice: priceData.price,
-            lastUpdated: new Date().toLocaleString()
-          };
-        }
-        return holding;
-      }));
     }
   };
 
@@ -146,7 +137,11 @@ function TWMarket() {
               </thead>
               <tbody>
                 {holdings.map((holding, index) => {
-                  const { unrealizedPnL, returnRate } = calculateUnrealizedPnL(holding);
+                  const currentPrice = stockPrices[holding.symbol]?.currentPrice || holding.currentPrice || 0;
+                  const { unrealizedPnL, returnRate } = calculateUnrealizedPnL({
+                    ...holding,
+                    currentPrice: currentPrice
+                  });
                   return (
                     <tr key={index} className="border-b hover:bg-gray-50">
                       <td className="p-2 font-semibold">{holding.symbol}</td>
@@ -154,18 +149,32 @@ function TWMarket() {
                       <td className="p-2 text-right">{holding.totalQuantity.toLocaleString()}</td>
                       <td className="p-2 text-right">NT${holding.avgCost.toFixed(2)}</td>
                       <td className="p-2 text-right">
-                        NT${holding.currentPrice.toFixed(2)}
-                        {holding.lastUpdated && (
-                          <div className="text-xs text-gray-400">
-                            {holding.lastUpdated}
+                        {currentPrice > 0 ? (
+                          <div>
+                            <div>NT${currentPrice.toFixed(2)}</div>
+                            {stockPrices[holding.symbol] && stockPrices[holding.symbol].lastUpdated && (
+                              <div className="text-xs text-gray-400">
+                                {stockPrices[holding.symbol].lastUpdated}
+                              </div>
+                            )}
                           </div>
+                        ) : (
+                          <div>NT${holding.currentPrice.toFixed(2)}</div>
                         )}
                       </td>
                       <td className={`p-2 text-right ${unrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {unrealizedPnL >= 0 ? '+' : ''}NT${unrealizedPnL.toLocaleString()}
+                        {currentPrice > 0 ? (
+                          `${unrealizedPnL >= 0 ? '+' : ''}NT${unrealizedPnL.toLocaleString()}`
+                        ) : (
+                          'NT$0'
+                        )}
                       </td>
                       <td className={`p-2 text-right ${returnRate >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {returnRate >= 0 ? '+' : ''}{returnRate.toFixed(2)}%
+                        {currentPrice > 0 ? (
+                          `${returnRate >= 0 ? '+' : ''}${returnRate.toFixed(2)}%`
+                        ) : (
+                          '+0.00%'
+                        )}
                       </td>
                     </tr>
                   );
