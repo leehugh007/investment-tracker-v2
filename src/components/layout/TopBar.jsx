@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Home, TrendingUp, Plus, Settings, BarChart3, 
-  Menu, X, TestTube 
+  Menu, X 
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -13,7 +13,6 @@ const NAV_ITEMS = [
   { to: '/jp', icon: TrendingUp, label: '日股', desc: '日股投資' },
   { to: '/history', icon: BarChart3, label: '分析', desc: '歷史分析' },
   { to: '/settings', icon: Settings, label: '設定', desc: '系統設定' },
-  { to: '/test-ui', icon: TestTube, label: '測試', desc: 'UI 測試' },
 ];
 const QUICK_ACTIONS = [
   { to: '/add-transaction', icon: Plus, label: '新增交易' }
