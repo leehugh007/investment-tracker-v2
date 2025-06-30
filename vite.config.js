@@ -3,9 +3,12 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react()],
-  base: '/investment-tracker-v2/',
+  // ⚡ 依執行命令自動切 base
+  base: command === 'serve'        // 本地 → vite dev / serve
+    ? '/'                          //   → /assets/⋯
+    : '/investment-tracker-v2/',   // build / GitHub Pages
   server: {
     host: '0.0.0.0',
     port: 3001,
@@ -15,6 +18,7 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
+    emptyOutDir: true,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -33,5 +37,5 @@ export default defineConfig({
     port: 4173,
     host: true
   }
-})
+}))
 
