@@ -114,29 +114,41 @@ const UnifiedPnLDisplay = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-blue-50 rounded-lg p-4">
-            <p className="text-sm text-blue-600 font-medium">總投資成本</p>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 transition-all duration-200 hover:shadow-md">
+            <div className="flex items-center mb-2">
+              <span className="text-lg mr-2">💰</span>
+              <p className="text-sm text-blue-600 font-medium">總投資成本</p>
+            </div>
             <p className="text-2xl font-bold text-blue-700">
               {unifiedPnLCalculator.formatTWD(portfolioSummary.totalInvestmentTWD)}
             </p>
           </div>
 
-          <div className="bg-green-50 rounded-lg p-4">
-            <p className="text-sm text-green-600 font-medium">當前市值</p>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 transition-all duration-200 hover:shadow-md">
+            <div className="flex items-center mb-2">
+              <span className="text-lg mr-2">📊</span>
+              <p className="text-sm text-green-600 font-medium">當前市值</p>
+            </div>
             <p className="text-2xl font-bold text-green-700">
               {unifiedPnLCalculator.formatTWD(portfolioSummary.totalCurrentValueTWD)}
             </p>
           </div>
 
-          <div className="bg-purple-50 rounded-lg p-4">
-            <p className="text-sm text-purple-600 font-medium">總損益</p>
+          <div className={`${portfolioSummary.totalPnLTWD >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border rounded-lg p-4 transition-all duration-200 hover:shadow-md`}>
+            <div className="flex items-center mb-2">
+              <span className="text-lg mr-2">📈</span>
+              <p className={`text-sm font-medium ${portfolioSummary.totalPnLTWD >= 0 ? 'text-green-600' : 'text-red-600'}`}>總損益</p>
+            </div>
             <p className={`text-2xl font-bold ${portfolioSummary.totalPnLTWD >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {unifiedPnLCalculator.formatTWD(portfolioSummary.totalPnLTWD)}
             </p>
           </div>
 
-          <div className="bg-orange-50 rounded-lg p-4">
-            <p className="text-sm text-orange-600 font-medium">總報酬率</p>
+          <div className={`${portfolioSummary.totalReturnRate >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border rounded-lg p-4 transition-all duration-200 hover:shadow-md`}>
+            <div className="flex items-center mb-2">
+              <span className="text-lg mr-2">🎯</span>
+              <p className={`text-sm font-medium ${portfolioSummary.totalReturnRate >= 0 ? 'text-green-600' : 'text-red-600'}`}>總報酬率</p>
+            </div>
             <p className={`text-2xl font-bold ${portfolioSummary.totalReturnRate >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {portfolioSummary.totalReturnRate}%
             </p>
@@ -145,20 +157,26 @@ const UnifiedPnLDisplay = () => {
 
         {/* 已實現 vs 未實現損益 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm text-gray-600 font-medium">已實現損益</p>
+          <div className={`${portfolioSummary.totalRealizedPnLTWD >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border rounded-lg p-4 transition-all duration-200 hover:shadow-md`}>
+            <div className="flex items-center mb-2">
+              <span className="text-lg mr-2">💵</span>
+              <p className={`text-sm font-medium ${portfolioSummary.totalRealizedPnLTWD >= 0 ? 'text-green-600' : 'text-red-600'}`}>已實現損益</p>
+            </div>
             <p className={`text-xl font-bold ${portfolioSummary.totalRealizedPnLTWD >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {unifiedPnLCalculator.formatTWD(portfolioSummary.totalRealizedPnLTWD)}
             </p>
-            <p className="text-xs text-gray-500">FIFO計算</p>
+            <p className="text-xs text-gray-500 mt-1">FIFO計算</p>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-sm text-gray-600 font-medium">未實現損益</p>
+          <div className={`${portfolioSummary.totalUnrealizedPnLTWD >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border rounded-lg p-4 transition-all duration-200 hover:shadow-md`}>
+            <div className="flex items-center mb-2">
+              <span className="text-lg mr-2">📊</span>
+              <p className={`text-sm font-medium ${portfolioSummary.totalUnrealizedPnLTWD >= 0 ? 'text-green-600' : 'text-red-600'}`}>未實現損益</p>
+            </div>
             <p className={`text-xl font-bold ${portfolioSummary.totalUnrealizedPnLTWD >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {unifiedPnLCalculator.formatTWD(portfolioSummary.totalUnrealizedPnLTWD)}
             </p>
-            <p className="text-xs text-gray-500">即時股價計算</p>
+            <p className="text-xs text-gray-500 mt-1">即時股價計算</p>
           </div>
         </div>
       </div>

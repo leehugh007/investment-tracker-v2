@@ -106,18 +106,22 @@ const Dashboard = () => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {cardList.map(card => (
-            <CardSummary key={card.title} {...card} />
-          ))}
-        </div>
+        <CardSummary 
+          data={{
+            transactions: JSON.parse(localStorage.getItem('transactions') || '[]'),
+            totalRealizedPnL: portfolioData.totalRealizedPnL,
+            totalUnrealizedPnL: portfolioData.totalUnrealizedPnL,
+            holdings: JSON.parse(localStorage.getItem('holdings') || '{}')
+          }}
+          formatCurrency={(value) => `TWD ${value.toLocaleString()}`}
+        />
 
         {/* 市場分佈 */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">🌍 各市場分佈</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {Object.entries(portfolioData.marketDistribution).map(([market, percentage]) => (
-              <div key={market} className="text-center p-4 bg-gray-50 rounded-lg">
+              <div key={market} className="text-center p-4 bg-gray-50 border border-gray-200 rounded-lg transition-all duration-200 hover:shadow-md">
                 <div className="text-2xl mb-2">{getMarketFlag(market)}</div>
                 <div className="font-semibold text-gray-900">{getMarketName(market)}</div>
                 <div className="text-lg font-bold text-blue-600">{percentage}%</div>
