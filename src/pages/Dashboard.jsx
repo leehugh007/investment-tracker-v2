@@ -130,9 +130,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* 統一損益計算 */}
-        <UnifiedPnLDisplay />
-
         {/* 匯率轉換服務 */}
         <ExchangeRateUpdater />
 
