@@ -13,6 +13,7 @@ import {
 import StockPriceUpdater from '../components/StockPriceUpdater';
 import QuickSellModal from '../components/QuickSellModal';
 import { transactionService, stockPriceService, useLocalStore } from '../hooks/useLocalStore';
+import unifiedPnLCalculator from '../utils/unifiedPnLCalculator';
 import { 
   Button, 
   Card, 
@@ -26,6 +27,10 @@ function USMarket() {
   const [stockPrices, setStockPrices] = useState({});
   const [sellModalOpen, setSellModalOpen] = useState(false);
   const [selectedHolding, setSelectedHolding] = useState(null);
+  const [realizedPnLStats, setRealizedPnLStats] = useState({
+    totalRealizedPnL: 0,
+    realizedReturnRate: 0
+  });
 
   // 使用新的 localStorage hook
   const { 
@@ -47,6 +52,48 @@ function USMarket() {
 
     loadStockPrices();
   }, []);
+
+  // 計算已實現損益
+  useEffect(() => {
+    const calculateRealizedPnL = async () => {
+      try {
+        if (usTransactions.length === 0) {
+          setRealizedPnLStats({
+            totalRealizedPnL: 0,
+            realizedReturnRate: 0
+          });
+          return;
+        }
+
+        // 確保匯率已更新
+        await unifiedPnLCalculator.updateExchangeRates();
+        
+        // 計算已實現損益
+        const realizedPnL = unifiedPnLCalculator.calculateRealizedPnL(usTransactions);
+        const totalRealizedUSD = realizedPnL.reduce((sum, item) => sum + (item.realizedPnL || 0), 0);
+        
+        // 計算已實現投資成本（用於計算已實現報酬率）
+        const realizedCost = realizedPnL.reduce((sum, item) => {
+          return sum + (item.quantity * item.avgCost);
+        }, 0);
+        
+        const realizedReturnRate = realizedCost > 0 ? (totalRealizedUSD / realizedCost * 100) : 0;
+
+        setRealizedPnLStats({
+          totalRealizedPnL: totalRealizedUSD,
+          realizedReturnRate
+        });
+      } catch (error) {
+        console.error('計算已實現損益時發生錯誤:', error);
+        setRealizedPnLStats({
+          totalRealizedPnL: 0,
+          realizedReturnRate: 0
+        });
+      }
+    };
+
+    calculateRealizedPnL();
+  }, [usTransactions]);
 
   const handlePricesUpdated = (priceResults, market) => {
     if (market === 'US') {
@@ -184,7 +231,7 @@ function USMarket() {
 
         {/* 投資組合概覽 */}
         {holdings.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -244,6 +291,44 @@ function USMarket() {
                     }`}>
                       {portfolioStats.totalReturnRate >= 0 ? '+' : ''}
                       {portfolioStats.totalReturnRate.toFixed(2)}%
+                    </p>
+                  </div>
+                  <BarChart3 className="w-8 h-8 text-primary" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">已實現損益</p>
+                    <p className={`text-2xl font-bold ${
+                      realizedPnLStats.totalRealizedPnL >= 0 ? 'text-positive' : 'text-negative'
+                    }`}>
+                      {realizedPnLStats.totalRealizedPnL >= 0 ? '+' : ''}
+                      ${realizedPnLStats.totalRealizedPnL.toLocaleString()}
+                    </p>
+                  </div>
+                  {realizedPnLStats.totalRealizedPnL >= 0 ? (
+                    <TrendingUp className="w-8 h-8 text-positive" />
+                  ) : (
+                    <TrendingDown className="w-8 h-8 text-negative" />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">已實現報酬率</p>
+                    <p className={`text-2xl font-bold ${
+                      realizedPnLStats.realizedReturnRate >= 0 ? 'text-positive' : 'text-negative'
+                    }`}>
+                      {realizedPnLStats.realizedReturnRate >= 0 ? '+' : ''}
+                      {realizedPnLStats.realizedReturnRate.toFixed(2)}%
                     </p>
                   </div>
                   <BarChart3 className="w-8 h-8 text-primary" />

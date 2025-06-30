@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StockPriceUpdater from '../components/StockPriceUpdater';
+import unifiedPnLCalculator from '../utils/unifiedPnLCalculator';
 
 function TWMarket() {
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
   const [stockPrices, setStockPrices] = useState({});
   const [holdings, setHoldings] = useState([]);
+  const [realizedPnLStats, setRealizedPnLStats] = useState({
+    totalRealizedPnL: 0,
+    realizedReturnRate: 0
+  });
 
   useEffect(() => {
     // 載入台股交易記錄
@@ -15,6 +20,48 @@ function TWMarket() {
     setTransactions(twTransactions);
     calculateHoldings(twTransactions);
   }, []);
+
+  // 計算已實現損益
+  useEffect(() => {
+    const calculateRealizedPnL = async () => {
+      try {
+        if (transactions.length === 0) {
+          setRealizedPnLStats({
+            totalRealizedPnL: 0,
+            realizedReturnRate: 0
+          });
+          return;
+        }
+
+        // 確保匯率已更新
+        await unifiedPnLCalculator.updateExchangeRates();
+        
+        // 計算已實現損益
+        const realizedPnL = unifiedPnLCalculator.calculateRealizedPnL(transactions);
+        const totalRealizedTWD = realizedPnL.reduce((sum, item) => sum + (item.realizedPnL || 0), 0);
+        
+        // 計算已實現投資成本（用於計算已實現報酬率）
+        const realizedCost = realizedPnL.reduce((sum, item) => {
+          return sum + (item.quantity * item.avgCost);
+        }, 0);
+        
+        const realizedReturnRate = realizedCost > 0 ? (totalRealizedTWD / realizedCost * 100) : 0;
+
+        setRealizedPnLStats({
+          totalRealizedPnL: totalRealizedTWD,
+          realizedReturnRate
+        });
+      } catch (error) {
+        console.error('計算已實現損益時發生錯誤:', error);
+        setRealizedPnLStats({
+          totalRealizedPnL: 0,
+          realizedReturnRate: 0
+        });
+      }
+    };
+
+    calculateRealizedPnL();
+  }, [transactions]);
 
   const calculateHoldings = (transactions) => {
     const holdingsMap = {};
@@ -127,7 +174,7 @@ function TWMarket() {
 
       {/* 投資組合統計卡片 */}
       {holdings.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -180,6 +227,40 @@ function TWMarket() {
                 }`}>
                   {portfolioStats.totalReturnRate >= 0 ? '+' : ''}
                   {portfolioStats.totalReturnRate.toFixed(2)}%
+                </p>
+              </div>
+              <div className="text-blue-500 text-2xl">📊</div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">已實現損益</p>
+                <p className={`text-2xl font-bold ${
+                  realizedPnLStats.totalRealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {realizedPnLStats.totalRealizedPnL >= 0 ? '+' : ''}
+                  NT${realizedPnLStats.totalRealizedPnL.toLocaleString()}
+                </p>
+              </div>
+              <div className={`text-2xl ${
+                realizedPnLStats.totalRealizedPnL >= 0 ? 'text-green-500' : 'text-red-500'
+              }`}>
+                {realizedPnLStats.totalRealizedPnL >= 0 ? '💰' : '💸'}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">已實現報酬率</p>
+                <p className={`text-2xl font-bold ${
+                  realizedPnLStats.realizedReturnRate >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {realizedPnLStats.realizedReturnRate >= 0 ? '+' : ''}
+                  {realizedPnLStats.realizedReturnRate.toFixed(2)}%
                 </p>
               </div>
               <div className="text-blue-500 text-2xl">📊</div>
