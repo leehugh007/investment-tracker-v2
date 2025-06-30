@@ -51,6 +51,33 @@ const JPMarket = () => {
     setHoldings(holdingsArray);
   };
 
+  // 計算投資組合統計
+  const calculatePortfolioStats = (holdings) => {
+    let totalValue = 0;
+    let totalCost = 0;
+    let totalUnrealizedPnL = 0;
+
+    holdings.forEach(holding => {
+      const currentPrice = holding.currentPrice || 0;
+      const marketValue = currentPrice * holding.totalQuantity;
+      const cost = holding.totalCost;
+      const unrealizedPnL = marketValue - cost;
+
+      totalValue += marketValue;
+      totalCost += cost;
+      totalUnrealizedPnL += unrealizedPnL;
+    });
+
+    const totalReturnRate = totalCost > 0 ? (totalUnrealizedPnL / totalCost * 100) : 0;
+
+    return {
+      totalValue,
+      totalCost,
+      totalUnrealizedPnL,
+      totalReturnRate
+    };
+  };
+
   const updateManualPrice = (symbol, newPrice) => {
     setHoldings(prev => prev.map(holding => 
       holding.symbol === symbol 
@@ -64,6 +91,7 @@ const JPMarket = () => {
     const returnRate = ((holding.currentPrice - holding.avgCost) / holding.avgCost) * 100;
     return { unrealizedPnL, returnRate };
   };
+  const portfolioStats = calculatePortfolioStats(holdings);
 
   return (
     <div className="container mx-auto p-6">
@@ -71,10 +99,86 @@ const JPMarket = () => {
         <h1 className="text-3xl font-bold text-gray-800 mb-2">
           🇯🇵 日股投資組合
         </h1>
-        <p className="text-gray-600">
-          手動輸入價格
-        </p>
-        <p className="text-sm text-gray-500 mt-2">
+        <p className="text-gray-600">手動更新價格功能</p>
+      </div>
+
+      {/* 投資組合統計卡片 */}
+      {holdings.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">總市值</p>
+                <p className="text-2xl font-bold">
+                  ¥{portfolioStats.totalValue.toLocaleString()}
+                </p>
+              </div>
+              <div className="text-blue-500 text-2xl">💰</div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">總成本</p>
+                <p className="text-2xl font-bold">
+                  ¥{portfolioStats.totalCost.toLocaleString()}
+                </p>
+              </div>
+              <div className="text-gray-500 text-2xl">📊</div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">未實現損益</p>
+                <p className={`text-2xl font-bold ${
+                  portfolioStats.totalUnrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {portfolioStats.totalUnrealizedPnL >= 0 ? '+' : ''}
+                  ¥{portfolioStats.totalUnrealizedPnL.toLocaleString()}
+                </p>
+              </div>
+              <div className={`text-2xl ${
+                portfolioStats.totalUnrealizedPnL >= 0 ? 'text-green-500' : 'text-red-500'
+              }`}>
+                {portfolioStats.totalUnrealizedPnL >= 0 ? '📈' : '📉'}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">總報酬率</p>
+                <p className={`text-2xl font-bold ${
+                  portfolioStats.totalReturnRate >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {portfolioStats.totalReturnRate >= 0 ? '+' : ''}
+                  {portfolioStats.totalReturnRate.toFixed(2)}%
+                </p>
+              </div>
+              <div className="text-blue-500 text-2xl">📊</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 新增交易按鈕 */}
+      <div className="mb-6">
+        <Link 
+          to="/add-transaction/jp"
+          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2"
+        >
+          ➕新增交易
+        </Link>
+      </div>
+
+      {/* 開發狀態說明 */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
+        <h2 className="text-lg font-semibold text-yellow-800 mb-2">🚧 開發中</h2>
+        <p className="text-yellow-700">
           此頁面將在後續階段實現，包含持股明細、交易記錄和手動價格輸入功能
         </p>
       </div>
