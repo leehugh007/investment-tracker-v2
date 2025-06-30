@@ -241,17 +241,17 @@ function TWMarket() {
                       <td className="p-2 text-right">{holding.totalQuantity.toLocaleString()}</td>
                       <td className="p-2 text-right">NT${holding.avgCost.toFixed(2)}</td>
                       <td className="p-2 text-right">
-                        {currentPrice > 0 ? (
+                        {stockPrices[holding.symbol] ? (
                           <div>
-                            <div>NT${currentPrice.toFixed(2)}</div>
-                            {stockPrices[holding.symbol] && stockPrices[holding.symbol].lastUpdated && (
-                              <div className="text-xs text-gray-400">
+                            <div className="font-semibold">NT${currentPrice.toFixed(2)}</div>
+                            {stockPrices[holding.symbol].lastUpdated && (
+                              <div className="text-xs text-gray-500">
                                 {stockPrices[holding.symbol].lastUpdated}
                               </div>
                             )}
                           </div>
                         ) : (
-                          <div>NT${holding.currentPrice.toFixed(2)}</div>
+                          <div>NT${currentPrice.toFixed(2)}</div>
                         )}
                       </td>
                       <td className={`p-2 text-right ${unrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
