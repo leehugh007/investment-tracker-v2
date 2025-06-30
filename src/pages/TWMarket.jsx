@@ -88,11 +88,7 @@ function TWMarket() {
     if (market === 'TW') {
       const newPrices = {};
       priceResults.forEach(result => {
-        newPrices[result.symbol] = {
-          ...result,
-          currentPrice: result.price,
-          lastUpdated: new Date().toLocaleString()
-        };
+        newPrices[result.symbol] = result;  // 直接使用 result 物件，和美股一樣
       });
       setStockPrices(prev => ({ ...prev, ...newPrices }));
     }
