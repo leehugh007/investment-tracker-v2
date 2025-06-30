@@ -7,7 +7,8 @@ import {
   Settings, 
   BarChart3,
   Menu,
-  X
+  X,
+  TestTube
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -57,6 +58,12 @@ const TopBar = () => {
       icon: Settings, 
       label: '設定',
       description: '系統設定'
+    },
+    { 
+      to: '/test-ui', 
+      icon: TestTube, 
+      label: '測試',
+      description: 'UI 測試頁面'
     },
   ];
 
