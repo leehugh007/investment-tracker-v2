@@ -10,6 +10,7 @@ import {
   Activity,
   AlertCircle
 } from 'lucide-react';
+import unifiedPnLCalculator from '../utils/unifiedPnLCalculator';
 
 const HKMarket = () => {
   const [transactions, setTransactions] = useState([]);
@@ -17,10 +18,56 @@ const HKMarket = () => {
   const [stockPrices, setStockPrices] = useState({});
   const [editingPrice, setEditingPrice] = useState(null);
   const [newPrice, setNewPrice] = useState('');
+  const [realizedPnLStats, setRealizedPnLStats] = useState({
+    totalRealizedPnL: 0,
+    realizedReturnRate: 0
+  });
 
   useEffect(() => {
     loadTransactions();
   }, []);
+
+  // 計算已實現損益
+  useEffect(() => {
+    const calculateRealizedPnL = async () => {
+      try {
+        if (transactions.length === 0) {
+          setRealizedPnLStats({
+            totalRealizedPnL: 0,
+            realizedReturnRate: 0
+          });
+          return;
+        }
+
+        // 確保匯率已更新
+        await unifiedPnLCalculator.updateExchangeRates();
+        
+        // 計算已實現損益
+        const realizedPnL = unifiedPnLCalculator.calculateRealizedPnL(transactions);
+        const totalRealizedHKD = realizedPnL.reduce((sum, item) => sum + (item.realizedPnL || 0), 0);
+        
+        // 計算已實現投資成本（用於計算已實現報酬率）
+        const realizedCost = realizedPnL.reduce((sum, item) => {
+          return sum + (item.quantity * item.avgCost);
+        }, 0);
+        
+        const realizedReturnRate = realizedCost > 0 ? (totalRealizedHKD / realizedCost * 100) : 0;
+
+        setRealizedPnLStats({
+          totalRealizedPnL: totalRealizedHKD,
+          realizedReturnRate
+        });
+      } catch (error) {
+        console.error('計算已實現損益時發生錯誤:', error);
+        setRealizedPnLStats({
+          totalRealizedPnL: 0,
+          realizedReturnRate: 0
+        });
+      }
+    };
+
+    calculateRealizedPnL();
+  }, [transactions]);
 
   const loadTransactions = () => {
     const allTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
@@ -132,7 +179,7 @@ const HKMarket = () => {
       </div>
 
       {/* 投資組合統計卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -177,6 +224,33 @@ const HKMarket = () => {
               </p>
             </div>
             <Activity className="h-8 w-8 text-green-600" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">已實現損益</p>
+              <p className={`text-2xl font-bold ${realizedPnLStats.totalRealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {realizedPnLStats.totalRealizedPnL >= 0 ? '+' : ''}HK${realizedPnLStats.totalRealizedPnL.toLocaleString()}
+              </p>
+            </div>
+            {realizedPnLStats.totalRealizedPnL >= 0 ? 
+              <TrendingUp className="h-8 w-8 text-green-600" /> : 
+              <TrendingDown className="h-8 w-8 text-red-600" />
+            }
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">已實現報酬率</p>
+              <p className={`text-2xl font-bold ${realizedPnLStats.realizedReturnRate >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {realizedPnLStats.realizedReturnRate >= 0 ? '+' : ''}{realizedPnLStats.realizedReturnRate.toFixed(2)}%
+              </p>
+            </div>
+            <Activity className="h-8 w-8 text-purple-600" />
           </div>
         </div>
       </div>
