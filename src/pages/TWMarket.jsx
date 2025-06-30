@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import StockPriceUpdater from '../components/StockPriceUpdater';
 
 function TWMarket() {
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
+  const [stockPrices, setStockPrices] = useState({});
 
   useEffect(() => {
     // 載入台股交易記錄
@@ -11,6 +13,16 @@ function TWMarket() {
     const twTransactions = allTransactions.filter(t => t.market === 'TW');
     setTransactions(twTransactions);
   }, []);
+
+  const handlePricesUpdated = (priceResults, market) => {
+    if (market === 'TW') {
+      const newPrices = {};
+      priceResults.forEach(result => {
+        newPrices[result.symbol] = result;
+      });
+      setStockPrices(prev => ({ ...prev, ...newPrices }));
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -39,6 +51,15 @@ function TWMarket() {
             (支援台股即時價格查詢和股票名稱自動顯示)
           </span>
         </div>
+      </div>
+
+      {/* 股價更新組件 */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <StockPriceUpdater
+          transactions={transactions}
+          onPricesUpdated={handlePricesUpdated}
+          market="TW"
+        />
       </div>
 
       {/* 持股明細 */}
