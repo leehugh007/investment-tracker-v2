@@ -11,6 +11,7 @@ import JPMarket from './pages/JPMarket';
 import HistoryAnalysis from './pages/HistoryAnalysis';
 import Settings from './pages/Settings';
 import TransactionForm from './components/TransactionForm';
+import TestUI from './pages/TestUI';
 
 // 樣式
 import './index.css';
@@ -41,6 +42,9 @@ function App() {
           <Route path="/add-transaction/tw" element={<TransactionForm market="TW" />} />
           <Route path="/add-transaction/hk" element={<TransactionForm market="HK" />} />
           <Route path="/add-transaction/jp" element={<TransactionForm market="JP" />} />
+          
+          {/* 測試頁面 - v2 UI 測試 */}
+          <Route path="/test-ui" element={<TestUI />} />
         </Routes>
       </Layout>
     </Router>
