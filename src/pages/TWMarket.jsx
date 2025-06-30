@@ -6,13 +6,56 @@ function TWMarket() {
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
   const [stockPrices, setStockPrices] = useState({});
+  const [holdings, setHoldings] = useState([]);
 
   useEffect(() => {
     // 載入台股交易記錄
     const allTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
     const twTransactions = allTransactions.filter(t => t.market === 'TW');
     setTransactions(twTransactions);
+    calculateHoldings(twTransactions);
   }, []);
+
+  const calculateHoldings = (transactions) => {
+    const holdingsMap = {};
+    
+    transactions.forEach(transaction => {
+      if (!holdingsMap[transaction.symbol]) {
+        holdingsMap[transaction.symbol] = {
+          symbol: transaction.symbol,
+          stockName: transaction.stockName || transaction.symbol,
+          totalQuantity: 0,
+          totalCost: 0,
+          avgCost: 0,
+          currentPrice: transaction.price, // 使用最後交易價格作為當前價格
+          market: 'TW',
+          currency: 'TWD'
+        };
+      }
+
+      const holding = holdingsMap[transaction.symbol];
+      
+      if (transaction.type === 'BUY') {
+        holding.totalQuantity += transaction.quantity;
+        holding.totalCost += transaction.quantity * transaction.price;
+      } else if (transaction.type === 'SELL') {
+        holding.totalQuantity -= transaction.quantity;
+        holding.totalCost -= transaction.quantity * holding.avgCost;
+      }
+      
+      holding.avgCost = holding.totalQuantity > 0 ? holding.totalCost / holding.totalQuantity : 0;
+      holding.currentPrice = transaction.price; // 更新為最新價格
+    });
+
+    const holdingsArray = Object.values(holdingsMap).filter(h => h.totalQuantity > 0);
+    setHoldings(holdingsArray);
+  };
+
+  const calculateUnrealizedPnL = (holding) => {
+    const unrealizedPnL = (holding.currentPrice - holding.avgCost) * holding.totalQuantity;
+    const returnRate = ((holding.currentPrice - holding.avgCost) / holding.avgCost) * 100;
+    return { unrealizedPnL, returnRate };
+  };
 
   const handlePricesUpdated = (priceResults, market) => {
     if (market === 'TW') {
@@ -21,6 +64,19 @@ function TWMarket() {
         newPrices[result.symbol] = result;
       });
       setStockPrices(prev => ({ ...prev, ...newPrices }));
+      
+      // 更新持股的當前價格
+      setHoldings(prev => prev.map(holding => {
+        const priceData = newPrices[holding.symbol];
+        if (priceData && priceData.price) {
+          return {
+            ...holding,
+            currentPrice: priceData.price,
+            lastUpdated: new Date().toLocaleString()
+          };
+        }
+        return holding;
+      }));
     }
   };
 
@@ -66,13 +122,58 @@ function TWMarket() {
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-lg font-semibold mb-4">持股明細</h2>
         
-        <div className="text-center py-8">
-          <div className="text-gray-400 text-lg mb-2">📈</div>
-          <div className="text-gray-500 mb-4">台股頁面已成功載入</div>
-          <div className="text-sm text-gray-400">
-            交易記錄數量: {transactions.length}
+        {holdings.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="text-gray-400 text-lg mb-2">📈</div>
+            <div className="text-gray-500 mb-4">台股頁面已成功載入</div>
+            <div className="text-sm text-gray-400">
+              交易記錄數量: {transactions.length}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2">股票代碼</th>
+                  <th className="text-left p-2">公司名稱</th>
+                  <th className="text-right p-2">持股數量</th>
+                  <th className="text-right p-2">平均成本</th>
+                  <th className="text-right p-2">當前價格</th>
+                  <th className="text-right p-2">未實現損益</th>
+                  <th className="text-right p-2">報酬率</th>
+                </tr>
+              </thead>
+              <tbody>
+                {holdings.map((holding, index) => {
+                  const { unrealizedPnL, returnRate } = calculateUnrealizedPnL(holding);
+                  return (
+                    <tr key={index} className="border-b hover:bg-gray-50">
+                      <td className="p-2 font-semibold">{holding.symbol}</td>
+                      <td className="p-2">{holding.stockName}</td>
+                      <td className="p-2 text-right">{holding.totalQuantity.toLocaleString()}</td>
+                      <td className="p-2 text-right">NT${holding.avgCost.toFixed(2)}</td>
+                      <td className="p-2 text-right">
+                        NT${holding.currentPrice.toFixed(2)}
+                        {holding.lastUpdated && (
+                          <div className="text-xs text-gray-400">
+                            {holding.lastUpdated}
+                          </div>
+                        )}
+                      </td>
+                      <td className={`p-2 text-right ${unrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {unrealizedPnL >= 0 ? '+' : ''}NT${unrealizedPnL.toLocaleString()}
+                      </td>
+                      <td className={`p-2 text-right ${returnRate >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {returnRate >= 0 ? '+' : ''}{returnRate.toFixed(2)}%
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* 交易記錄 */}

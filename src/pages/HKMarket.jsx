@@ -1,25 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import StockPriceUpdater from '../components/StockPriceUpdater';
 
 const HKMarket = () => {
   const [transactions, setTransactions] = useState([]);
   const [holdings, setHoldings] = useState([]);
-  const [stockPrices, setStockPrices] = useState({});
 
   useEffect(() => {
     loadTransactions();
   }, []);
-
-  const handlePricesUpdated = (priceResults, market) => {
-    if (market === 'HK') {
-      const newPrices = {};
-      priceResults.forEach(result => {
-        newPrices[result.symbol] = result;
-      });
-      setStockPrices(prev => ({ ...prev, ...newPrices }));
-    }
-  };
 
   const loadTransactions = () => {
     const allTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
@@ -99,15 +87,6 @@ const HKMarket = () => {
         >
           ➕新增交易
         </Link>
-      </div>
-
-      {/* 股價更新組件 */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <StockPriceUpdater
-          transactions={transactions}
-          onPricesUpdated={handlePricesUpdated}
-          market="HK"
-        />
       </div>
 
       {/* 持股明細 */}
