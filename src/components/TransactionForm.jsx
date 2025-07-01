@@ -236,7 +236,7 @@ const TransactionForm = ({ market }) => {
                       </span>
                     </div>
                     <Badge variant="secondary" className="text-xs">
-                      {market === 'US' || market === 'TW' ? 'API自動更新' : '手動輸入價格'}
+                      API自動更新
                     </Badge>
                   </div>
                 </CardContent>
@@ -256,30 +256,13 @@ const TransactionForm = ({ market }) => {
                   <p className="text-sm text-destructive">{errors.symbol.message}</p>
                 )}
                 
-                {/* 股票名稱自動顯示或手動輸入 */}
-                {(market === 'US' || market === 'TW') ? (
-                  <StockNameLookup 
-                    symbol={watchedSymbol}
-                    market={market}
-                    onStockInfoChange={handleStockInfoChange}
-                    className="mt-2"
-                  />
-                ) : (
-                  <div className="mt-2">
-                    <Label htmlFor="stockName">公司名稱 *</Label>
-                    <Input
-                      id="stockName"
-                      placeholder="請輸入公司名稱（如：騰訊控股、豐田汽車）"
-                      {...register('stockName', { 
-                        required: '請輸入公司名稱' 
-                      })}
-                      className="mt-1"
-                    />
-                    {errors.stockName && (
-                      <p className="text-sm text-destructive mt-1">{errors.stockName.message}</p>
-                    )}
-                  </div>
-                )}
+                {/* 股票名稱自動顯示 */}
+                <StockNameLookup 
+                  symbol={watchedSymbol}
+                  market={market}
+                  onStockInfoChange={handleStockInfoChange}
+                  className="mt-2"
+                />
               </div>
 
               {/* 交易類型 */}

@@ -5,6 +5,9 @@ class APIManager {
     this.FINNHUB_API_KEY = 'd1cd8n1r01qre5al6mbgd1cd8n1r01qre5al6mc0';
     this.EXCHANGE_API_KEY = 'b2c5ad8a96b0bafd62e49709';
     
+    // Yahoo Finance API 端點 (本地開發)
+    this.YAHOO_FINANCE_API_BASE = 'http://localhost:5001/api/yahoo-finance';
+    
     // 緩存管理
     this.cache = new Map();
     this.cacheTimeout = {
@@ -240,6 +243,176 @@ class APIManager {
     }
   }
 
+  // 港股股價查詢 (Yahoo Finance API)
+  async getHKStockPrice(symbol) {
+    const cacheKey = `hk_price_${symbol}`;
+    const cached = this.getCache(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const response = await fetch(
+        `${this.YAHOO_FINANCE_API_BASE}/stock-price/${symbol}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      const result = {
+        symbol: data.symbol,
+        currentPrice: data.currentPrice,
+        change: data.change,
+        changePercent: data.changePercent,
+        high: data.dayHigh,
+        low: data.dayLow,
+        open: data.open,
+        previousClose: data.previousClose,
+        timestamp: data.timestamp
+      };
+
+      this.setCache(cacheKey, result, this.cacheTimeout.stockPrice);
+      return result;
+      
+    } catch (error) {
+      console.error(`港股價格查詢失敗 (${symbol}):`, error);
+      throw new Error(`無法獲取 ${symbol} 的股價: ${error.message}`);
+    }
+  }
+
+  // 港股公司資訊查詢 (Yahoo Finance API)
+  async getHKStockInfo(symbol) {
+    const cacheKey = `hk_info_${symbol}`;
+    const cached = this.getCache(cacheKey);
+    if (cached) return cached;
+
+    try {
+      const response = await fetch(
+        `${this.YAHOO_FINANCE_API_BASE}/stock-info/${symbol}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      const result = {
+        symbol: data.symbol,
+        name: data.name,
+        industry: data.industry || 'N/A',
+        sector: data.sector || 'N/A',
+        currency: data.currency || 'HKD',
+        exchange: data.exchange || 'HKG',
+        timestamp: data.timestamp
+      };
+
+      this.setCache(cacheKey, result, this.cacheTimeout.stockName);
+      return result;
+      
+    } catch (error) {
+      console.error(`港股資訊查詢失敗 (${symbol}):`, error);
+      throw new Error(`無法獲取 ${symbol} 的公司資訊: ${error.message}`);
+    }
+  }
+
+  // 日股股價查詢 (Yahoo Finance API)
+  async getJPStockPrice(symbol) {
+    const cacheKey = `jp_price_${symbol}`;
+    const cached = this.getCache(cacheKey);
+    if (cached) return cached;
+
+    try {
+      // 確保日股代號有正確的後綴
+      const jpSymbol = symbol.endsWith('.T') ? symbol : `${symbol}.T`;
+      
+      const response = await fetch(
+        `${this.YAHOO_FINANCE_API_BASE}/stock-price/${jpSymbol}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      const result = {
+        symbol: data.symbol,
+        currentPrice: data.currentPrice,
+        change: data.change,
+        changePercent: data.changePercent,
+        high: data.dayHigh,
+        low: data.dayLow,
+        open: data.open,
+        previousClose: data.previousClose,
+        timestamp: data.timestamp
+      };
+
+      this.setCache(cacheKey, result, this.cacheTimeout.stockPrice);
+      return result;
+      
+    } catch (error) {
+      console.error(`日股價格查詢失敗 (${symbol}):`, error);
+      throw new Error(`無法獲取 ${symbol} 的股價: ${error.message}`);
+    }
+  }
+
+  // 日股公司資訊查詢 (Yahoo Finance API)
+  async getJPStockInfo(symbol) {
+    const cacheKey = `jp_info_${symbol}`;
+    const cached = this.getCache(cacheKey);
+    if (cached) return cached;
+
+    try {
+      // 確保日股代號有正確的後綴
+      const jpSymbol = symbol.endsWith('.T') ? symbol : `${symbol}.T`;
+      
+      const response = await fetch(
+        `${this.YAHOO_FINANCE_API_BASE}/stock-info/${jpSymbol}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      const result = {
+        symbol: data.symbol,
+        name: data.name,
+        industry: data.industry || 'N/A',
+        sector: data.sector || 'N/A',
+        currency: data.currency || 'JPY',
+        exchange: data.exchange || 'JPX',
+        timestamp: data.timestamp
+      };
+
+      this.setCache(cacheKey, result, this.cacheTimeout.stockName);
+      return result;
+      
+    } catch (error) {
+      console.error(`日股資訊查詢失敗 (${symbol}):`, error);
+      throw new Error(`無法獲取 ${symbol} 的公司資訊: ${error.message}`);
+    }
+  }
+
   // 統一股價查詢接口
   async getStockPrice(symbol, market) {
     switch (market) {
@@ -247,6 +420,10 @@ class APIManager {
         return await this.getUSStockPrice(symbol);
       case 'TW':
         return await this.getTWStockPrice(symbol);
+      case 'HK':
+        return await this.getHKStockPrice(symbol);
+      case 'JP':
+        return await this.getJPStockPrice(symbol);
       default:
         throw new Error(`不支援的市場: ${market}`);
     }
@@ -259,6 +436,10 @@ class APIManager {
         return await this.getUSStockInfo(symbol);
       case 'TW':
         return await this.getTWStockInfo(symbol);
+      case 'HK':
+        return await this.getHKStockInfo(symbol);
+      case 'JP':
+        return await this.getJPStockInfo(symbol);
       default:
         throw new Error(`不支援的市場: ${market}`);
     }
