@@ -10,6 +10,7 @@ import {
   Activity,
   AlertCircle
 } from 'lucide-react';
+import QuickSellModal from '../components/QuickSellModal';
 import unifiedPnLCalculator from '../utils/unifiedPnLCalculator';
 
 const HKMarket = () => {
@@ -18,6 +19,8 @@ const HKMarket = () => {
   const [stockPrices, setStockPrices] = useState({});
   const [editingPrice, setEditingPrice] = useState(null);
   const [newPrice, setNewPrice] = useState('');
+  const [sellModalOpen, setSellModalOpen] = useState(false);
+  const [selectedHolding, setSelectedHolding] = useState(null);
   const [realizedPnLStats, setRealizedPnLStats] = useState({
     totalRealizedPnL: 0,
     realizedReturnRate: 0
@@ -126,17 +129,28 @@ const HKMarket = () => {
         throw new Error('API未返回有效價格');
       }
       
-      // 更新持股的當前價格
+      const lastUpdated = new Date().toLocaleString();
+      
+      // 同時更新holdings和stockPrices狀態
       setHoldings(prev => prev.map(holding => 
         holding.symbol === symbol 
           ? { 
               ...holding, 
               currentPrice: currentPrice,
-              lastUpdated: new Date().toLocaleString(),
+              lastUpdated: lastUpdated,
               autoUpdated: true
             }
           : holding
       ));
+      
+      // 同時更新stockPrices狀態以確保顯示一致性
+      setStockPrices(prev => ({
+        ...prev,
+        [symbol]: {
+          currentPrice: currentPrice,
+          lastUpdated: lastUpdated
+        }
+      }));
       
       return { success: true, price: currentPrice };
     } catch (error) {
@@ -172,6 +186,44 @@ const HKMarket = () => {
     }));
     setEditingPrice(null);
     setNewPrice('');
+  };
+
+  // 賣出處理函數
+  const handleSellClick = (holding) => {
+    setSelectedHolding(holding);
+    setSellModalOpen(true);
+  };
+
+  const handleSellComplete = () => {
+    loadTransactions(); // 重新載入交易記錄
+    setSellModalOpen(false);
+    setSelectedHolding(null);
+  };
+
+  // 刪除持股功能
+  const handleDeleteHolding = (symbol) => {
+    if (confirm(`確定要刪除 ${symbol} 的所有交易記錄嗎？此操作無法復原。`)) {
+      try {
+        // 獲取所有交易記錄
+        const allTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+        
+        // 過濾掉該股票的所有交易記錄
+        const filteredTransactions = allTransactions.filter(tx => 
+          !(tx.symbol === symbol && tx.market === 'HK')
+        );
+        
+        // 保存更新後的交易記錄
+        localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
+        
+        // 重新載入數據
+        loadTransactions();
+        
+        alert(`已成功刪除 ${symbol} 的所有交易記錄`);
+      } catch (error) {
+        console.error('刪除持股時發生錯誤:', error);
+        alert('刪除失敗，請稍後再試');
+      }
+    }
   };
 
   // 計算投資組合統計
@@ -343,6 +395,7 @@ const HKMarket = () => {
                   <th className="text-right p-2">當前價格</th>
                   <th className="text-right p-2">未實現損益</th>
                   <th className="text-right p-2">報酬率</th>
+                  <th className="text-center p-2">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -407,6 +460,22 @@ const HKMarket = () => {
                       <td className={`p-2 text-right ${returnRate >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {returnRate >= 0 ? '+' : ''}{returnRate.toFixed(2)}%
                       </td>
+                      <td className="p-2 text-center">
+                        <div className="flex gap-2 justify-center">
+                          <button
+                            onClick={() => handleSellClick(holding)}
+                            className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                          >
+                            賣出
+                          </button>
+                          <button
+                            onClick={() => handleDeleteHolding(holding.symbol)}
+                            className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700"
+                          >
+                            刪除
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -445,6 +514,14 @@ const HKMarket = () => {
           </div>
         )}
       </div>
+
+      {/* 賣出模態框 */}
+      <QuickSellModal
+        isOpen={sellModalOpen}
+        onClose={() => setSellModalOpen(false)}
+        holding={selectedHolding}
+        onSellComplete={handleSellComplete}
+      />
     </div>
   );
 };

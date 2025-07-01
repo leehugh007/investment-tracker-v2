@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StockPriceUpdater from '../components/StockPriceUpdater';
+import QuickSellModal from '../components/QuickSellModal';
 import unifiedPnLCalculator from '../utils/unifiedPnLCalculator';
 
 function TWMarket() {
@@ -8,6 +9,8 @@ function TWMarket() {
   const [transactions, setTransactions] = useState([]);
   const [stockPrices, setStockPrices] = useState({});
   const [holdings, setHoldings] = useState([]);
+  const [sellModalOpen, setSellModalOpen] = useState(false);
+  const [selectedHolding, setSelectedHolding] = useState(null);
   const [realizedPnLStats, setRealizedPnLStats] = useState({
     totalRealizedPnL: 0,
     realizedReturnRate: 0
@@ -102,6 +105,50 @@ function TWMarket() {
     const unrealizedPnL = (holding.currentPrice - holding.avgCost) * holding.totalQuantity;
     const returnRate = ((holding.currentPrice - holding.avgCost) / holding.avgCost) * 100;
     return { unrealizedPnL, returnRate };
+  };
+
+  // 賣出處理函數
+  const handleSellClick = (holding) => {
+    setSelectedHolding(holding);
+    setSellModalOpen(true);
+  };
+
+  const handleSellComplete = () => {
+    // 重新載入交易記錄
+    const allTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+    const twTransactions = allTransactions.filter(t => t.market === 'TW');
+    setTransactions(twTransactions);
+    calculateHoldings(twTransactions);
+    setSellModalOpen(false);
+    setSelectedHolding(null);
+  };
+
+  // 刪除持股功能
+  const handleDeleteHolding = (symbol) => {
+    if (confirm(`確定要刪除 ${symbol} 的所有交易記錄嗎？此操作無法復原。`)) {
+      try {
+        // 獲取所有交易記錄
+        const allTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+        
+        // 過濾掉該股票的所有交易記錄
+        const filteredTransactions = allTransactions.filter(tx => 
+          !(tx.symbol === symbol && tx.market === 'TW')
+        );
+        
+        // 保存更新後的交易記錄
+        localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
+        
+        // 重新載入數據
+        const twTransactions = filteredTransactions.filter(t => t.market === 'TW');
+        setTransactions(twTransactions);
+        calculateHoldings(twTransactions);
+        
+        alert(`已成功刪除 ${symbol} 的所有交易記錄`);
+      } catch (error) {
+        console.error('刪除持股時發生錯誤:', error);
+        alert('刪除失敗，請稍後再試');
+      }
+    }
   };
 
   // 計算投資組合統計
@@ -302,6 +349,7 @@ function TWMarket() {
                   <th className="text-right p-2">當前價格</th>
                   <th className="text-right p-2">未實現損益</th>
                   <th className="text-right p-2">報酬率</th>
+                  <th className="text-center p-2">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -345,6 +393,22 @@ function TWMarket() {
                           '+0.00%'
                         )}
                       </td>
+                      <td className="p-2 text-center">
+                        <div className="flex gap-2 justify-center">
+                          <button
+                            onClick={() => handleSellClick(holding)}
+                            className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                          >
+                            賣出
+                          </button>
+                          <button
+                            onClick={() => handleDeleteHolding(holding.symbol)}
+                            className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700"
+                          >
+                            刪除
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -383,6 +447,14 @@ function TWMarket() {
           </div>
         )}
       </div>
+
+      {/* 賣出模態框 */}
+      <QuickSellModal
+        isOpen={sellModalOpen}
+        onClose={() => setSellModalOpen(false)}
+        holding={selectedHolding}
+        onSellComplete={handleSellComplete}
+      />
     </div>
   );
 }
