@@ -108,6 +108,50 @@ const HKMarket = () => {
     return holdingsArray;
   };
 
+  // 自動股價更新功能
+  const updateStockPrice = async (symbol) => {
+    try {
+      // 調用API獲取最新股價
+      const response = await fetch(`/api?symbol=${symbol}&action=price`);
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      // 更新持股的當前價格
+      setHoldings(prev => prev.map(holding => 
+        holding.symbol === symbol 
+          ? { 
+              ...holding, 
+              currentPrice: data.currentPrice,
+              lastUpdated: new Date().toLocaleString(),
+              autoUpdated: true
+            }
+          : holding
+      ));
+      
+      return { success: true, price: data.currentPrice };
+    } catch (error) {
+      console.error('自動更新股價失敗:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  // 批量更新所有持股價格
+  const updateAllStockPrices = async () => {
+    if (!Array.isArray(holdings) || holdings.length === 0) return;
+    
+    const updatePromises = holdings.map(holding => updateStockPrice(holding.symbol));
+    const results = await Promise.all(updatePromises);
+    
+    const successCount = results.filter(r => r.success).length;
+    const failCount = results.filter(r => !r.success).length;
+    
+    // 可以添加通知或狀態顯示
+    console.log(`股價更新完成: ${successCount} 成功, ${failCount} 失敗`);
+  };
+
   const updateManualPrice = (symbol, newPrice) => {
     const priceValue = parseFloat(newPrice);
     if (isNaN(priceValue) || priceValue <= 0) return;
