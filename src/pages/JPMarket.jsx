@@ -1,15 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Plus, 
-  BarChart3, 
-  Edit3,
-  TrendingUp, 
-  TrendingDown,
-  DollarSign,
-  Activity,
-  AlertCircle
-} from 'lucide-react';
+import { Edit3 } from 'lucide-react';
 import unifiedPnLCalculator from '../utils/unifiedPnLCalculator';
 
 const JPMarket = () => {
@@ -68,9 +59,11 @@ const JPMarket = () => {
 
   const loadTransactions = () => {
     const allTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
-    const jpTransactions = allTransactions.filter(t => t.market === 'JP');
+    const jpTransactions = allTransactions.filter(tx => tx.market === 'JP');
     setTransactions(jpTransactions);
-    calculateHoldings(jpTransactions);
+    
+    const holdingsArray = calculateHoldings(jpTransactions);
+    setHoldings(holdingsArray);
   };
 
   const calculateHoldings = (transactions) => {
@@ -84,18 +77,15 @@ const JPMarket = () => {
           totalQuantity: 0,
           totalCost: 0,
           avgCost: 0,
-          currentPrice: transaction.price, // 使用最後交易價格作為當前價格
-          market: 'JP',
-          currency: 'JPY'
+          currentPrice: transaction.price
         };
       }
-
-      const holding = holdingsMap[transaction.symbol];
       
+      const holding = holdingsMap[transaction.symbol];
       if (transaction.type === 'BUY') {
-        holding.totalQuantity += transaction.quantity;
         holding.totalCost += transaction.quantity * transaction.price;
-      } else if (transaction.type === 'SELL') {
+        holding.totalQuantity += transaction.quantity;
+      } else {
         holding.totalQuantity -= transaction.quantity;
         holding.totalCost -= transaction.quantity * holding.avgCost;
       }
@@ -148,112 +138,104 @@ const JPMarket = () => {
     const returnRate = ((holding.currentPrice - holding.avgCost) / holding.avgCost) * 100;
     return { unrealizedPnL, returnRate };
   };
+
   const portfolioStats = calculatePortfolioStats(holdings);
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">
-          🇯🇵 日股投資組合
-        </h1>
-        <p className="text-gray-600">手動更新價格功能</p>
-      </div>
-
-      {/* 投資組合統計卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">總市值</p>
-                <p className="text-2xl font-bold">
-                  ¥{portfolioStats.totalValue.toLocaleString()}
-                </p>
-              </div>
-              <DollarSign className="h-8 w-8 text-yellow-600" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">總成本</p>
-                <p className="text-2xl font-bold">
-                  ¥{portfolioStats.totalCost.toLocaleString()}
-                </p>
-              </div>
-              <BarChart3 className="h-8 w-8 text-blue-600" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">未實現損益</p>
-                <p className={`text-2xl font-bold ${
-                  portfolioStats.totalUnrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {portfolioStats.totalUnrealizedPnL >= 0 ? '+' : ''}
-                  ¥{portfolioStats.totalUnrealizedPnL.toLocaleString()}
-                </p>
-              </div>
-              {portfolioStats.totalUnrealizedPnL >= 0 ? 
-                <TrendingUp className="h-8 w-8 text-green-600" /> : 
-                <TrendingDown className="h-8 w-8 text-red-600" />
-              }
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">總報酬率</p>
-                <p className={`text-2xl font-bold ${
-                  portfolioStats.totalReturnRate >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {portfolioStats.totalReturnRate >= 0 ? '+' : ''}
-                  {portfolioStats.totalReturnRate.toFixed(2)}%
-                </p>
-              </div>
-              <Activity className="h-8 w-8 text-green-600" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">已實現損益</p>
-                <p className={`text-2xl font-bold ${realizedPnLStats.totalRealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {realizedPnLStats.totalRealizedPnL >= 0 ? '+' : ''}¥{realizedPnLStats.totalRealizedPnL.toLocaleString()}
-                </p>
-              </div>
-              {realizedPnLStats.totalRealizedPnL >= 0 ? 
-                <TrendingUp className="h-8 w-8 text-green-600" /> : 
-                <TrendingDown className="h-8 w-8 text-red-600" />
-              }
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">已實現報酬率</p>
-                <p className={`text-2xl font-bold ${realizedPnLStats.realizedReturnRate >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {realizedPnLStats.realizedReturnRate >= 0 ? '+' : ''}{realizedPnLStats.realizedReturnRate.toFixed(2)}%
-                </p>
-              </div>
-              <Activity className="h-8 w-8 text-purple-600" />
-            </div>
-          </div>
-        </div>
-
-      {/* 新增交易按鈕 */}
-      <div className="mb-6">
+    <div className="container mx-auto px-4 py-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">🇯🇵 日股投資組合</h1>
         <Link 
           to="/add-transaction/jp"
           className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2"
         >
           ➕新增交易
         </Link>
+      </div>
+
+      {/* 股價更新功能說明 */}
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+        <div className="flex items-center gap-2 text-green-800">
+          <Edit3 size={20} />
+          <span className="font-semibold">💡 股價更新功能</span>
+        </div>
+        <p className="text-green-700 mt-1">
+          📊 在持股明細中修改價格輸入框，然後點擊 "🔄 更新" 按鈕即可更新股價
+        </p>
+        <p className="text-green-600 text-sm mt-1">
+          ✨ 更新後會顯示最後更新時間，幫助您追蹤價格變化
+        </p>
+      </div>
+
+      {/* 投資組合統計卡片 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">總市值</p>
+              <p className="text-2xl font-bold">¥{portfolioStats.totalValue.toLocaleString()}</p>
+            </div>
+            <span className="text-2xl">💰</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">總成本</p>
+              <p className="text-2xl font-bold">¥{portfolioStats.totalCost.toLocaleString()}</p>
+            </div>
+            <span className="text-2xl">📊</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">未實現損益</p>
+              <p className={`text-2xl font-bold ${portfolioStats.totalUnrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {portfolioStats.totalUnrealizedPnL >= 0 ? '+' : ''}¥{portfolioStats.totalUnrealizedPnL.toLocaleString()}
+              </p>
+            </div>
+            <span className="text-2xl">📈</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">總報酬率</p>
+              <p className={`text-2xl font-bold ${portfolioStats.totalReturnRate >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {portfolioStats.totalReturnRate >= 0 ? '+' : ''}{portfolioStats.totalReturnRate.toFixed(2)}%
+              </p>
+            </div>
+            <span className="text-2xl">🎯</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">已實現損益</p>
+              <p className={`text-2xl font-bold ${realizedPnLStats.totalRealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {realizedPnLStats.totalRealizedPnL >= 0 ? '+' : ''}¥{realizedPnLStats.totalRealizedPnL.toLocaleString()}
+              </p>
+            </div>
+            <span className="text-2xl">💵</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">已實現報酬率</p>
+              <p className={`text-2xl font-bold ${realizedPnLStats.realizedReturnRate >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {realizedPnLStats.realizedReturnRate >= 0 ? '+' : ''}{realizedPnLStats.realizedReturnRate.toFixed(2)}%
+              </p>
+            </div>
+            <span className="text-2xl">📊</span>
+          </div>
+        </div>
       </div>
 
       {/* 持股明細 */}
@@ -278,7 +260,6 @@ const JPMarket = () => {
                   <th className="text-left p-2">當前價格</th>
                   <th className="text-left p-2">未實現損益</th>
                   <th className="text-left p-2">報酬率</th>
-                  <th className="text-left p-2">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -291,27 +272,34 @@ const JPMarket = () => {
                       <td className="p-2">{holding.totalQuantity.toLocaleString()}</td>
                       <td className="p-2">¥{holding.avgCost.toFixed(0)}</td>
                       <td className="p-2">
-                        <input
-                          type="number"
-                          step="1"
-                          value={holding.currentPrice}
-                          onChange={(e) => updateManualPrice(holding.symbol, parseFloat(e.target.value) || 0)}
-                          className="w-20 px-2 py-1 border rounded text-sm"
-                        />
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            step="1"
+                            value={holding.currentPrice}
+                            onChange={(e) => updateManualPrice(holding.symbol, parseFloat(e.target.value) || 0)}
+                            className="w-20 px-2 py-1 border rounded text-sm"
+                            placeholder="價格"
+                          />
+                          <button
+                            onClick={() => updateManualPrice(holding.symbol, holding.currentPrice)}
+                            className="bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 flex items-center gap-1"
+                            title="更新股價"
+                          >
+                            🔄 更新
+                          </button>
+                        </div>
+                        {holding.lastUpdated && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            更新時間: {holding.lastUpdated}
+                          </div>
+                        )}
                       </td>
                       <td className={`p-2 ${unrealizedPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         ¥{unrealizedPnL.toFixed(0)}
                       </td>
                       <td className={`p-2 ${returnRate >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {returnRate >= 0 ? '+' : ''}{returnRate.toFixed(2)}%
-                      </td>
-                      <td className="p-2">
-                        <button
-                          onClick={() => updateManualPrice(holding.symbol, holding.currentPrice)}
-                          className="text-blue-600 hover:text-blue-800 text-xs"
-                        >
-                          更新
-                        </button>
                       </td>
                     </tr>
                   );
@@ -357,7 +345,7 @@ const JPMarket = () => {
                     </td>
                     <td className="p-2">{transaction.quantity.toLocaleString()}</td>
                     <td className="p-2">¥{transaction.price.toFixed(0)}</td>
-                    <td className="p-2">¥{(transaction.quantity * transaction.price).toFixed(0)}</td>
+                    <td className="p-2">¥{(transaction.quantity * transaction.price).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

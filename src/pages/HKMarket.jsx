@@ -171,10 +171,13 @@ const HKMarket = () => {
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
         <div className="flex items-center gap-2 text-blue-800">
           <Edit3 size={20} />
-          <span className="font-semibold">手動更新價格功能</span>
+          <span className="font-semibold">💡 股價更新功能</span>
         </div>
         <p className="text-blue-700 mt-1">
-          點擊持股明細中的價格可手動更新當前股價
+          📊 在持股明細中點擊 "當前價格" 欄位即可手動更新股價
+        </p>
+        <p className="text-blue-600 text-sm mt-1">
+          ✨ 更新後會顯示最後更新時間，幫助您追蹤價格變化
         </p>
       </div>
 

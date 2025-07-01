@@ -76,7 +76,11 @@ class handler(BaseHTTPRequestHandler):
             else:
                 formatted_symbol = symbol
             
-            # 調用Yahoo Finance API
+            # 港股特殊處理：使用Chart API獲取基本資訊
+            if '.HK' in formatted_symbol:
+                return self.get_hk_stock_info(formatted_symbol)
+            
+            # 其他市場使用原有API
             url = f"https://query1.finance.yahoo.com/v1/finance/quoteType/{formatted_symbol}"
             
             req = urllib.request.Request(url)
@@ -108,6 +112,74 @@ class handler(BaseHTTPRequestHandler):
             return {'error': '無法解析API回應'}
         except Exception as e:
             return {'error': f'未知錯誤: {str(e)}'}
+    
+    def get_hk_stock_info(self, symbol):
+        """港股專用資訊獲取"""
+        try:
+            # 港股代號對照表（常見股票）
+            hk_stock_names = {
+                '00700.HK': '騰訊控股',
+                '00005.HK': '匯豐控股',
+                '00939.HK': '建設銀行',
+                '00941.HK': '中國移動',
+                '01299.HK': '友邦保險',
+                '02318.HK': '中國平安',
+                '01398.HK': '工商銀行',
+                '00388.HK': '香港交易所',
+                '00883.HK': '中國海洋石油',
+                '01810.HK': '小米集團',
+                '09988.HK': '阿里巴巴',
+                '03690.HK': '美團',
+                '00175.HK': '吉利汽車',
+                '02020.HK': '安踏體育',
+                '01024.HK': '快手科技'
+            }
+            
+            # 如果在對照表中，直接返回
+            if symbol in hk_stock_names:
+                return {
+                    'symbol': symbol,
+                    'name': hk_stock_names[symbol],
+                    'industry': 'N/A',
+                    'sector': 'N/A',
+                    'currency': 'HKD',
+                    'exchange': 'HKEX',
+                    'timestamp': datetime.now().isoformat()
+                }
+            
+            # 否則嘗試從Chart API獲取
+            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+            req = urllib.request.Request(url)
+            req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
+            
+            with urllib.request.urlopen(req, timeout=10) as response:
+                data = json.loads(response.read().decode())
+            
+            if data.get('chart') and data['chart'].get('result'):
+                meta = data['chart']['result'][0]['meta']
+                return {
+                    'symbol': symbol,
+                    'name': meta.get('longName', symbol.replace('.HK', '')),
+                    'industry': 'N/A',
+                    'sector': 'N/A', 
+                    'currency': meta.get('currency', 'HKD'),
+                    'exchange': 'HKEX',
+                    'timestamp': datetime.now().isoformat()
+                }
+            
+            # 如果都失敗，返回基本資訊
+            return {
+                'symbol': symbol,
+                'name': symbol.replace('.HK', ''),
+                'industry': 'N/A',
+                'sector': 'N/A',
+                'currency': 'HKD',
+                'exchange': 'HKEX',
+                'timestamp': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            return {'error': f'港股查詢錯誤: {str(e)}'}
     
     def get_stock_price(self, symbol):
         """獲取股票價格資訊"""
