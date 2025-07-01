@@ -6,7 +6,7 @@ class APIManager {
     this.EXCHANGE_API_KEY = 'b2c5ad8a96b0bafd62e49709';
     
     // Yahoo Finance API 端點 (本地開發)
-    this.YAHOO_FINANCE_API_BASE = 'http://localhost:5001/api/yahoo-finance';
+    this.YAHOO_FINANCE_API_BASE = 'http://localhost:5001/api/stock-info';
     
     // 緩存管理
     this.cache = new Map();
@@ -332,7 +332,7 @@ class APIManager {
     if (cached) return cached;
 
     try {
-      const response = await fetch(`/api/yahoo-finance?symbol=${symbol}&action=price`);
+      const response = await fetch(`/api/stock-info?symbol=${symbol}&action=price`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -370,7 +370,7 @@ class APIManager {
     if (cached) return cached;
 
     try {
-      const response = await fetch(`/api/yahoo-finance?symbol=${symbol}&action=info`);
+      const response = await fetch(`/api/stock-info?symbol=${symbol}&action=info`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -408,7 +408,7 @@ class APIManager {
     if (cached) return cached;
 
     try {
-      const response = await fetch(`/api/yahoo-finance?symbol=${symbol}&action=price`);
+      const response = await fetch(`/api/stock-info?symbol=${symbol}&action=price`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -448,7 +448,7 @@ class APIManager {
     if (cached) return cached;
 
     try {
-      const response = await fetch(`/api/yahoo-finance?symbol=${symbol}&action=info`);
+      const response = await fetch(`/api/stock-info?symbol=${symbol}&action=info`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

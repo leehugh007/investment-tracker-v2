@@ -1,14 +1,2 @@
-{
-  "functions": {
-    "api/yahoo-finance.py": {
-      "runtime": "python3.9"
-    }
-  },
-  "routes": [
-    {
-      "src": "/api/yahoo-finance",
-      "dest": "/api/yahoo-finance.py"
-    }
-  ]
-}
+{}
 
