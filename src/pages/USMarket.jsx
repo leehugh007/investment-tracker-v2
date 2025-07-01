@@ -119,6 +119,32 @@ function USMarket() {
     setSelectedHolding(null);
   };
 
+  // 刪除持股功能
+  const handleDeleteHolding = (symbol) => {
+    if (confirm(`確定要刪除 ${symbol} 的所有交易記錄嗎？此操作無法復原。`)) {
+      try {
+        // 獲取所有交易記錄
+        const allTransactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+        
+        // 過濾掉該股票的所有交易記錄
+        const filteredTransactions = allTransactions.filter(tx => 
+          !(tx.symbol === symbol && tx.market === 'US')
+        );
+        
+        // 保存更新後的交易記錄
+        localStorage.setItem('transactions', JSON.stringify(filteredTransactions));
+        
+        // 重新載入數據
+        reloadTransactions();
+        
+        alert(`已成功刪除 ${symbol} 的所有交易記錄`);
+      } catch (error) {
+        console.error('刪除持股時發生錯誤:', error);
+        alert('刪除失敗，請稍後再試');
+      }
+    }
+  };
+
   // 計算持股統計
   const calculateHoldings = () => {
     const holdings = new Map();
@@ -451,13 +477,23 @@ function USMarket() {
                             )}
                           </td>
                           <td className="py-3 px-4 text-center">
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => handleSellClick(holding)}
-                            >
-                              賣出
-                            </Button>
+                            <div className="flex gap-2 justify-center">
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleSellClick(holding)}
+                              >
+                                賣出
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDeleteHolding(holding.symbol)}
+                                className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                              >
+                                刪除
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       );
