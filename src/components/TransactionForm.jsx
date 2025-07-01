@@ -158,8 +158,8 @@ const TransactionForm = ({ market }) => {
     symbol: {
       required: '請輸入股票代碼',
       pattern: {
-        value: /^[A-Za-z0-9]+$/,
-        message: '股票代碼只能包含字母和數字'
+        value: /^[A-Za-z0-9.]+$/,
+        message: '股票代碼只能包含字母、數字和點號'
       }
     },
     quantity: {

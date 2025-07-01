@@ -213,9 +213,19 @@ const HKMarket = () => {
 
       {/* 手動更新價格說明 */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-        <div className="flex items-center gap-2 text-blue-800">
-          <Edit3 size={20} />
-          <span className="font-semibold">💡 股價更新功能</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-blue-800">
+            <Edit3 size={20} />
+            <span className="font-semibold">💡 股價更新功能</span>
+          </div>
+          <button
+            onClick={updateAllStockPrices}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors"
+            disabled={!holdings || holdings.length === 0}
+          >
+            <Activity size={16} />
+            🔄 自動更新
+          </button>
         </div>
         <p className="text-blue-700 mt-1">
           📊 在持股明細中點擊 "當前價格" 欄位即可手動更新股價
