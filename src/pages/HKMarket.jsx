@@ -119,19 +119,26 @@ const HKMarket = () => {
         throw new Error(data.error);
       }
       
+      // 修復：API返回的是price字段，不是currentPrice
+      const currentPrice = data.price || data.currentPrice;
+      
+      if (!currentPrice) {
+        throw new Error('API未返回有效價格');
+      }
+      
       // 更新持股的當前價格
       setHoldings(prev => prev.map(holding => 
         holding.symbol === symbol 
           ? { 
               ...holding, 
-              currentPrice: data.currentPrice,
+              currentPrice: currentPrice,
               lastUpdated: new Date().toLocaleString(),
               autoUpdated: true
             }
           : holding
       ));
       
-      return { success: true, price: data.currentPrice };
+      return { success: true, price: currentPrice };
     } catch (error) {
       console.error('自動更新股價失敗:', error);
       return { success: false, error: error.message };

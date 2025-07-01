@@ -384,11 +384,12 @@ class APIManager {
 
       const result = {
         symbol: data.symbol,
-        name: data.name,
+        name: data.company_name || data.name || symbol, // 修復：正確映射company_name為name
         industry: data.industry || 'N/A',
         sector: data.sector || 'N/A',
         currency: data.currency || 'HKD',
         exchange: data.exchange || 'HKG',
+        market: 'HK',
         timestamp: Date.now()
       };
 
@@ -462,11 +463,12 @@ class APIManager {
 
       const result = {
         symbol: data.symbol,
-        name: data.name,
+        name: data.company_name || data.name || symbol, // 修復：正確映射company_name為name
         industry: data.industry || 'N/A',
         sector: data.sector || 'N/A',
         currency: data.currency || 'JPY',
         exchange: data.exchange || 'JPX',
+        market: 'JP',
         timestamp: Date.now()
       };
 

@@ -93,9 +93,7 @@ const TransactionForm = ({ market }) => {
       // 準備交易資料
       const transactionData = {
         symbol: data.symbol.toUpperCase(),
-        stockName: (market === 'HK' || market === 'JP') 
-          ? (data.stockName || data.symbol.toUpperCase())
-          : (stockInfo?.name || data.symbol.toUpperCase()),
+        stockName: stockInfo?.name || data.symbol.toUpperCase(), // 修復：統一使用stockInfo.name
         market,
         type: data.type,
         quantity: parseInt(data.quantity),
