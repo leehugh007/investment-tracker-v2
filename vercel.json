@@ -1,19 +1,13 @@
 {
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+  "functions": {
+    "api/yahoo-finance.py": {
+      "runtime": "python3.9"
     }
-  ],
-  "headers": [
+  },
+  "routes": [
     {
-      "source": "/assets/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
+      "src": "/api/yahoo-finance",
+      "dest": "/api/yahoo-finance.py"
     }
   ]
 }

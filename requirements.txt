@@ -1,0 +1,3 @@
+# Vercel Functions Python dependencies
+# 使用標準庫，無需額外依賴
+

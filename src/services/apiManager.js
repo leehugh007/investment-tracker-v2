@@ -325,25 +325,14 @@ class APIManager {
     }
   }
 
-  // 港股股價查詢 (直接調用Yahoo Finance API)
+  // 港股股價查詢 (使用Vercel Functions)
   async getHKStockPrice(symbol) {
     const cacheKey = `hk_price_${symbol}`;
     const cached = this.getCache(cacheKey);
     if (cached) return cached;
 
     try {
-      // 確保港股代號有正確的後綴
-      const hkSymbol = symbol.endsWith('.HK') ? symbol : `${symbol}.HK`;
-      
-      // 使用CORS代理直接調用Yahoo Finance API
-      const corsProxy = 'https://cors-anywhere.herokuapp.com/';
-      const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${hkSymbol}`;
-      
-      const response = await fetch(corsProxy + yahooUrl, {
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
-        }
-      });
+      const response = await fetch(`/api/yahoo-finance?symbol=${symbol}&action=price`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -351,23 +340,19 @@ class APIManager {
       
       const data = await response.json();
       
-      if (!data.chart || !data.chart.result || data.chart.result.length === 0) {
-        throw new Error('無法獲取股價數據');
+      if (data.error) {
+        throw new Error(data.error);
       }
 
-      const result = data.chart.result[0];
-      const meta = result.meta;
-      const quote = result.indicators.quote[0];
-      
       const stockData = {
-        symbol: meta.symbol,
-        currentPrice: meta.regularMarketPrice || quote.close[quote.close.length - 1],
-        change: meta.regularMarketPrice - meta.previousClose,
-        changePercent: ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100,
-        high: meta.regularMarketDayHigh,
-        low: meta.regularMarketDayLow,
-        open: quote.open[quote.open.length - 1],
-        previousClose: meta.previousClose,
+        symbol: data.symbol,
+        currentPrice: data.currentPrice,
+        change: data.change,
+        changePercent: data.changePercent,
+        high: data.high,
+        low: data.low,
+        open: data.open,
+        previousClose: data.previousClose,
         timestamp: Date.now()
       };
 
@@ -378,25 +363,14 @@ class APIManager {
       console.error(`港股價格查詢失敗 (${symbol}):`, error);
       throw new Error(`無法獲取 ${symbol} 的股價: ${error.message}`);
     }
-  }  // 港股公司資訊查詢 (直接調用Yahoo Finance API)
+  }  // 港股公司資訊查詢 (使用Vercel Functions)
   async getHKStockInfo(symbol) {
     const cacheKey = `hk_info_${symbol}`;
     const cached = this.getCache(cacheKey);
     if (cached) return cached;
 
     try {
-      // 確保港股代號有正確的後綴
-      const hkSymbol = symbol.endsWith('.HK') ? symbol : `${symbol}.HK`;
-      
-      // 使用CORS代理直接調用Yahoo Finance API
-      const corsProxy = 'https://cors-anywhere.herokuapp.com/';
-      const yahooUrl = `https://query1.finance.yahoo.com/v1/finance/quoteType/${hkSymbol}`;
-      
-      const response = await fetch(corsProxy + yahooUrl, {
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
-        }
-      });
+      const response = await fetch(`/api/yahoo-finance?symbol=${symbol}&action=info`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -404,19 +378,17 @@ class APIManager {
       
       const data = await response.json();
       
-      if (!data.quoteType || !data.quoteType.result || data.quoteType.result.length === 0) {
-        throw new Error('無法獲取公司資訊');
+      if (data.error) {
+        throw new Error(data.error);
       }
 
-      const stockInfo = data.quoteType.result[0];
-      
       const result = {
-        symbol: stockInfo.symbol,
-        name: stockInfo.longName || stockInfo.shortName || symbol,
-        industry: stockInfo.industry || 'N/A',
-        sector: stockInfo.sector || 'N/A',
-        currency: stockInfo.currency || 'HKD',
-        exchange: stockInfo.exchange || 'HKG',
+        symbol: data.symbol,
+        name: data.name,
+        industry: data.industry || 'N/A',
+        sector: data.sector || 'N/A',
+        currency: data.currency || 'HKD',
+        exchange: data.exchange || 'HKG',
         timestamp: Date.now()
       };
 
@@ -429,25 +401,14 @@ class APIManager {
     }
   }
 
-  // 日股股價查詢 (直接調用Yahoo Finance API)
+  // 日股股價查詢 (使用Vercel Functions)
   async getJPStockPrice(symbol) {
     const cacheKey = `jp_price_${symbol}`;
     const cached = this.getCache(cacheKey);
     if (cached) return cached;
 
     try {
-      // 確保日股代號有正確的後綴
-      const jpSymbol = symbol.endsWith('.T') ? symbol : `${symbol}.T`;
-      
-      // 使用CORS代理直接調用Yahoo Finance API
-      const corsProxy = 'https://cors-anywhere.herokuapp.com/';
-      const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${jpSymbol}`;
-      
-      const response = await fetch(corsProxy + yahooUrl, {
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
-        }
-      });
+      const response = await fetch(`/api/yahoo-finance?symbol=${symbol}&action=price`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -455,23 +416,19 @@ class APIManager {
       
       const data = await response.json();
       
-      if (!data.chart || !data.chart.result || data.chart.result.length === 0) {
-        throw new Error('無法獲取股價數據');
+      if (data.error) {
+        throw new Error(data.error);
       }
 
-      const result = data.chart.result[0];
-      const meta = result.meta;
-      const quote = result.indicators.quote[0];
-      
       const stockData = {
-        symbol: meta.symbol,
-        currentPrice: meta.regularMarketPrice || quote.close[quote.close.length - 1],
-        change: meta.regularMarketPrice - meta.previousClose,
-        changePercent: ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100,
-        high: meta.regularMarketDayHigh,
-        low: meta.regularMarketDayLow,
-        open: quote.open[quote.open.length - 1],
-        previousClose: meta.previousClose,
+        symbol: data.symbol,
+        currentPrice: data.currentPrice,
+        change: data.change,
+        changePercent: data.changePercent,
+        high: data.high,
+        low: data.low,
+        open: data.open,
+        previousClose: data.previousClose,
         timestamp: Date.now()
       };
 
@@ -484,25 +441,14 @@ class APIManager {
     }
   }
 
-  // 日股公司資訊查詢 (直接調用Yahoo Finance API)
+  // 日股公司資訊查詢 (使用Vercel Functions)
   async getJPStockInfo(symbol) {
     const cacheKey = `jp_info_${symbol}`;
     const cached = this.getCache(cacheKey);
     if (cached) return cached;
 
     try {
-      // 確保日股代號有正確的後綴
-      const jpSymbol = symbol.endsWith('.T') ? symbol : `${symbol}.T`;
-      
-      // 使用CORS代理直接調用Yahoo Finance API
-      const corsProxy = 'https://cors-anywhere.herokuapp.com/';
-      const yahooUrl = `https://query1.finance.yahoo.com/v1/finance/quoteType/${jpSymbol}`;
-      
-      const response = await fetch(corsProxy + yahooUrl, {
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
-        }
-      });
+      const response = await fetch(`/api/yahoo-finance?symbol=${symbol}&action=info`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -510,19 +456,17 @@ class APIManager {
       
       const data = await response.json();
       
-      if (!data.quoteType || !data.quoteType.result || data.quoteType.result.length === 0) {
-        throw new Error('無法獲取公司資訊');
+      if (data.error) {
+        throw new Error(data.error);
       }
 
-      const stockInfo = data.quoteType.result[0];
-      
       const result = {
-        symbol: stockInfo.symbol,
-        name: stockInfo.longName || stockInfo.shortName || symbol,
-        industry: stockInfo.industry || 'N/A',
-        sector: stockInfo.sector || 'N/A',
-        currency: stockInfo.currency || 'JPY',
-        exchange: stockInfo.exchange || 'JPX',
+        symbol: data.symbol,
+        name: data.name,
+        industry: data.industry || 'N/A',
+        sector: data.sector || 'N/A',
+        currency: data.currency || 'JPY',
+        exchange: data.exchange || 'JPX',
         timestamp: Date.now()
       };
 
